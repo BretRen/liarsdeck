@@ -347,6 +347,7 @@ func (r *Room) RemoveClient(client *Client) {
 
 	if removedIdx != -1 {
 		p := r.Game.State.Players[removedIdx]
+		p.Client = nil
 		r.Game.Log(fmt.Sprintf("👋 %s 离开了房间", p.Nickname))
 		if r.Game.State.Status == "waiting" {
 			r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
@@ -397,21 +398,33 @@ func (c *Client) ReadPump() {
 
 		// 🆕 重新开始
 		if msg.Action == "reset" && g.State.Status == "game_over" {
+			alive := []*Player{}
 			for _, p := range g.State.Players {
+				if p.Client == nil {
+					continue // 🆕 断线的玩家，不回来
+				}
 				p.IsAlive = true
 				p.Hand = []Card{}
 				p.Bullets = 6
 				revolver := []string{"Blank", "Blank", "Blank", "Blank", "Blank", "Fatal"}
 				rand.Shuffle(len(revolver), func(i, j int) { revolver[i], revolver[j] = revolver[j], revolver[i] })
 				p.Revolver = revolver
+				alive = append(alive, p)
 			}
-			g.State.Status = "playing"
+			g.State.Players = alive
 			g.State.Winner = ""
 			g.State.Logs = []string{}
 			g.State.CurrentTurn = -1
 			g.State.LastPlayer = -1
 			g.State.LastPlayedCnt = 0
-			g.StartRound()
+			// 🆕 如果不够人，回到 waiting 等人加
+			if len(alive) < 2 {
+				g.State.Status = "waiting"
+				g.Log("等待更多玩家加入...")
+			} else {
+				g.State.Status = "playing"
+				g.StartRound()
+			}
 		}
 
 		if g.State.Status == "playing" && g.State.Players[g.State.CurrentTurn].ID == c.ID {
