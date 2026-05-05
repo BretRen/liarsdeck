@@ -289,7 +289,7 @@ func main() {
 		return nil
 	})
 
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":8095"))
 }
 
 func (r *Room) RemoveClient(client *Client) {
