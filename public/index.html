@@ -185,6 +185,10 @@
 
             <div v-if="state.status === 'game_over'">
                 <h1>🏆 游戏结束！获胜者是: {{ state.winner }}</h1>
+                <button @click="sendAction('reset', {})"
+                    style="background:#2ecc71; color:white; font-size:18px; padding:12px 30px; margin-top:15px;">
+                    🔄 再来一局
+                </button>
             </div>
 
             <h3>对战日志</h3>
