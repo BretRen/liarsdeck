@@ -1,27 +1,109 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <title>说谎者 (Liar's Deck) - Web版</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #2c3e50; color: white; padding: 20px; }
-        .card { display: inline-block; width: 60px; height: 90px; border-radius: 8px; background: white; color: black; font-size: 24px; font-weight: bold; line-height: 90px; text-align: center; margin: 5px; cursor: pointer; user-select: none; border: 3px solid transparent;}
-        .card.selected { border-color: #e74c3c; transform: translateY(-10px); }
-        .player-box { border: 1px solid #7f8c8d; padding: 10px; margin: 10px; border-radius: 8px; display: inline-block; min-width: 150px;}
-        .active-turn { border-color: #2ecc71; box-shadow: 0 0 15px #2ecc71; }
-        .dead { opacity: 0.5; filter: grayscale(100%); }
-        button { padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; font-weight: bold; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-play { background: #3498db; color: white; }
-        .btn-liar { background: #e74c3c; color: white; }
-        .logs { background: #1a252f; padding: 10px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 14px;}
-        .table-area { background: #34495e; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+        }
+
+        .card {
+            display: inline-block;
+            width: 60px;
+            height: 90px;
+            border-radius: 8px;
+            background: white;
+            color: black;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 90px;
+            text-align: center;
+            margin: 5px;
+            cursor: pointer;
+            user-select: none;
+            border: 3px solid transparent;
+        }
+
+        .card.selected {
+            border-color: #e74c3c;
+            transform: translateY(-10px);
+        }
+
+        .player-box {
+            border: 1px solid #7f8c8d;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 8px;
+            display: inline-block;
+            min-width: 150px;
+        }
+
+        .active-turn {
+            border-color: #2ecc71;
+            box-shadow: 0 0 15px #2ecc71;
+        }
+
+        .dead {
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            font-weight: bold;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-play {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-liar {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .logs {
+            background: #1a252f;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .table-area {
+            background: #34495e;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .pre-join-room {
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
     <div id="app">
-        <div v-if="!connected">
+        <div v-if="!connected" class="pre-join-room">
             <h2>加入房间</h2>
             <input v-model="roomID" placeholder="房间号" />
             <input v-model="myID" placeholder="你的昵称" />
@@ -29,8 +111,9 @@
         </div>
 
         <div v-else>
-            <h2>房间: {{ roomID }} | 状态: {{ state.status }} 
-                <span v-if="state.status === 'playing'" style="color:#e74c3c">倒计时: {{ Math.max(0, state.deadline - currentUnix) }}s</span>
+            <h2>房间: {{ roomID }} | 状态: {{ state.status }}
+                <span v-if="state.status === 'playing'" style="color:#e74c3c">倒计时: {{ Math.max(0, state.deadline -
+                    currentUnix) }}s</span>
             </h2>
 
             <div v-if="state.status === 'waiting'">
@@ -38,9 +121,9 @@
             </div>
 
             <div>
-                <div v-for="(p, index) in state.players" :key="p.id" 
-                     class="player-box" :class="{'active-turn': state.current_turn === index, 'dead': !p.is_alive}">
-                    <h3>{{ p.nickname }} {{ p.id === myID ? '(我)' : '' }}</h3>
+                <div v-for="(p, index) in state.players" :key="p.id" class="player-box"
+                    :class="{'active-turn': state.current_turn === index, 'dead': !p.is_alive}">
+                    <h3>{{ p.nickname }} {{ p.nickname === String(myID) ? '(我)' : '' }}</h3>
                     <p v-if="p.is_alive">剩余子弹: {{ p.bullets }}/6</p>
                     <p v-if="p.is_alive">手牌数: {{ p.hand ? p.hand.length : 0 }}</p>
                     <p v-else>💀 已阵亡</p>
@@ -59,9 +142,8 @@
                 <hr>
                 <h3>我的手牌 (点击选择)</h3>
                 <div>
-                    <div v-for="(c, i) in myHand" :key="i" 
-                         class="card" :class="{selected: selectedIndexes.includes(i)}" 
-                         @click="toggleSelect(i)">
+                    <div v-for="(c, i) in myHand" :key="i" class="card" :class="{selected: selectedIndexes.includes(i)}"
+                        @click="toggleSelect(i)">
                         {{ c }}
                     </div>
                 </div>
@@ -75,6 +157,31 @@
                     </button>
                 </div>
             </div>
+            <div v-if="currentStep !== ''"
+                style="position:fixed; top:0; left:0; right:0; bottom:0; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: background 0.3s;"
+                :style="{ background: currentStep === 'liar_call' ? 'rgba(200,0,0,0.85)' : 'rgba(0,0,0,0.8)' }">
+
+                <template v-if="currentStep === 'liar_call'">
+                    <h1 style="font-size:80px; color:white; text-shadow: 0 0 30px red;">🚨 说谎！</h1>
+                    <p style="font-size:24px; color:#ffcccc;">{{ currentStepData.caller }} 质疑 {{ currentStepData.accused
+                        }}</p>
+                </template>
+
+                <template v-if="currentStep === 'reveal'">
+                    <h2 style="color:white;">{{ currentStepData.accused }} 的底牌</h2>
+                    <div>
+                        <div v-for="c in currentStepData.cards" class="card"
+                            style="font-size:36px; width:80px; height:120px; line-height:120px;">
+                            {{ c }}
+                        </div>
+                    </div>
+                </template>
+
+                <template v-if="currentStep === 'shot'">
+                    <h1 style="font-size:60px;">{{ currentStepData.fatal ? '💥 砰！' : '💨 咔哒' }}</h1>
+                    <h2 style="color:white;">{{ currentStepData.target }}</h2>
+                </template>
+            </div>
 
             <div v-if="state.status === 'game_over'">
                 <h1>🏆 游戏结束！获胜者是: {{ state.winner }}</h1>
@@ -87,8 +194,9 @@
         </div>
     </div>
 
+
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onUnmounted } = Vue;
 
         createApp({
             setup() {
@@ -99,27 +207,57 @@
                 const state = ref({ players: [], logs: [], deadline: 0 });
                 const currentUnix = ref(Math.floor(Date.now() / 1000));
                 const selectedIndexes = ref([]);
+                const eventQueue = ref([]);
+                const processingEvent = ref(false);
+                const currentStep = ref('');
+                const currentStepData = ref({});
 
-                // 保持本地时钟滴答，用于倒计时
+                // ---- 时钟 ----
                 setInterval(() => { currentUnix.value = Math.floor(Date.now() / 1000); }, 1000);
 
+                // ---- 事件队列 ----
+                function processQueue() {
+                    if (processingEvent.value || eventQueue.value.length === 0) return;
+                    processingEvent.value = true;
+                    const event = eventQueue.value.shift();
+                    currentStep.value = event.type;
+                    currentStepData.value = event.data;
+
+                    let duration = 2000;
+                    if (event.type === 'liar_call') duration = 1500;
+                    if (event.type === 'reveal') duration = 2500;
+                    if (event.type === 'shot') duration = 2000;
+
+                    setTimeout(() => {
+                        currentStep.value = '';
+                        processingEvent.value = false;
+                        processQueue();
+                    }, duration);
+                }
+
+                // ---- WebSocket ----
                 const connect = () => {
                     if (!roomID.value || !myID.value) return;
-                    // ws.value = new WebSocket(`ws://localhost:8080/ws?room=${roomID.value}&name=${myID.value}`);
-                    ws.value = new WebSocket(`wss://${window.location.host}/ws?room=${roomID.value}&name=${myID.value}`);
-                    
+                    ws.value = new WebSocket(`${window.location.protocol === 'https:' ? "wss" :
+
+
+                        "ws"}://${window.location.host}/ws?room=${roomID.value}&name=${myID.value}`);
+
                     ws.value.onopen = () => { connected.value = true; };
-                    
+
                     ws.value.onmessage = (e) => {
                         const msg = JSON.parse(e.data);
                         if (msg.type === 'game_state') {
                             state.value = msg.data;
-                            // 如果回合更替，清空我的选中状态
                             if (!isMyTurn.value) selectedIndexes.value = [];
+                        } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
+                            eventQueue.value.push({ type: msg.type, data: msg.data });
+                            processQueue();
                         }
                     };
                 };
 
+                // ---- 操作函数 ----
                 const sendAction = (action, payload) => {
                     ws.value.send(JSON.stringify({ action, payload }));
                 };
@@ -140,40 +278,39 @@
                     selectedIndexes.value = [];
                 };
 
-                // --- 核心计算属性 ---
+                // ---- 计算属性 ----
                 const myPlayer = computed(() => state.value.players.find(p => p.nickname === myID.value));
                 const myHand = computed(() => myPlayer.value ? myPlayer.value.hand : []);
                 const amIAlive = computed(() => myPlayer.value && myPlayer.value.is_alive);
-                
-                // 判断当前是否是我的回合
+
                 const isMyTurn = computed(() => {
                     if (!state.value.players || state.value.current_turn === -1) return false;
+
                     return state.value.players[state.value.current_turn].nickname === myID.value;
                 });
 
-                // 上家是否把牌出光了 (必须质疑)
                 const prevPlayerEmpty = computed(() => {
                     if (state.value.last_player === -1) return false;
                     return state.value.players[state.value.last_player].hand.length === 0;
                 });
 
-                // 【发牌】按钮的 Disabled 逻辑
                 const canPlay = computed(() => {
                     if (!isMyTurn.value) return false;
-                    if (prevPlayerEmpty.value) return false; // 上家没牌了，我必须质疑
+                    if (prevPlayerEmpty.value) return false;
                     return selectedIndexes.value.length >= 1 && selectedIndexes.value.length <= 3;
                 });
 
-                // 【质疑】按钮的 Disabled 逻辑
                 const canCallLiar = computed(() => {
                     if (!isMyTurn.value) return false;
-                    if (state.value.last_player === -1) return false; // 轮次的第一手不能质疑
+                    if (state.value.last_player === -1) return false;
                     return true;
                 });
 
-                return { connected, roomID, myID, connect, state, currentUnix, myHand, selectedIndexes, toggleSelect, canPlay, canCallLiar, playCards, sendAction, isMyTurn, amIAlive };
+                return { currentStep, currentStepData, connected, roomID, myID, connect, state, currentUnix, myHand, selectedIndexes, toggleSelect, canPlay, canCallLiar, playCards, sendAction, isMyTurn, amIAlive };
             }
         }).mount('#app');
     </script>
+
 </body>
+
 </html>

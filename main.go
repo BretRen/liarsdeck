@@ -175,6 +175,11 @@ func (g *Game) FireGun(playerIdx int) {
 	p.Revolver = p.Revolver[1:]
 	p.Bullets = len(p.Revolver)
 
+	p.Client.Room.BroadcastEvent("shot", map[string]interface{}{
+		"target": p.Nickname,
+		"fatal":  bullet == "Fatal",
+	})
+
 	if bullet == "Fatal" {
 		p.IsAlive = false
 		g.Log(fmt.Sprintf("💥 砰！%s 抽中致命子弹，被淘汰出局！", p.Nickname))
@@ -214,7 +219,15 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	caller := g.State.Players[callerIdx]
 	accused := g.State.Players[accusedIdx]
 	g.Log(fmt.Sprintf("🚨 %s 质疑 %s 说谎！", caller.Nickname, accused.Nickname))
-
+	caller.Client.Room.BroadcastEvent("liar_call", map[string]interface{}{
+		"caller":  caller.Nickname,
+		"accused": accused.Nickname,
+	})
+	accused.Client.Room.BroadcastEvent("reveal", map[string]interface{}{
+		"caller":  caller.Nickname,
+		"accused": accused.Nickname,
+		"cards":   g.HiddenCards,
+	})
 	isLiar := false
 	revealMsg := fmt.Sprintf("%s 的底牌是: ", accused.Nickname)
 	for _, c := range g.HiddenCards {
@@ -231,6 +244,21 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	} else {
 		g.Log("❌ 质疑失败！出牌者是清白的！")
 		g.FireGun(callerIdx)
+	}
+}
+
+func (r *Room) BroadcastEvent(eventType string, data interface{}) {
+	b, _ := json.Marshal(map[string]interface{}{
+		"type": eventType,
+		"data": data,
+	})
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for client := range r.Clients {
+		select {
+		case client.Send <- b:
+		default:
+		}
 	}
 }
 
