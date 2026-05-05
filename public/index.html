@@ -157,6 +157,7 @@
                     </button>
                 </div>
             </div>
+
             <div v-if="currentStep !== ''"
                 style="position:fixed; top:0; left:0; right:0; bottom:0; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: background 0.3s;"
                 :style="{ background: currentStep === 'liar_call' ? 'rgba(200,0,0,0.85)' : 'rgba(0,0,0,0.8)' }">
@@ -183,10 +184,6 @@
                 </template>
             </div>
 
-            <div v-if="!myPlayer && connected" style="text-align:center; padding:40px;">
-                <h2>👀 观战模式</h2>
-                <p>你正在观看游戏</p>
-            </div>
 
             <div v-if="state.status === 'game_over'">
                 <h1>🏆 游戏结束！获胜者是: {{ state.winner }}</h1>
@@ -220,6 +217,8 @@
                 const processingEvent = ref(false);
                 const currentStep = ref('');
                 const currentStepData = ref({});
+                const hasReceivedState = ref(false);
+                const joinedAs = ref('');
 
                 // ---- 时钟 ----
                 setInterval(() => { currentUnix.value = Math.floor(Date.now() / 1000); }, 1000);
@@ -247,10 +246,8 @@
                 // ---- WebSocket ----
                 const connect = () => {
                     if (!roomID.value || !myID.value) return;
-                    ws.value = new WebSocket(`${window.location.protocol === 'https:' ? "wss" :
-
-
-                        "ws"}://${window.location.host}/ws?room=${roomID.value}&name=${myID.value}`);
+                    joinedAs.value = myID.value;
+                    ws.value = new WebSocket(`${window.location.protocol === 'https:' ? "wss" : "ws"}://${window.location.host}/ws?room=${roomID.value}&name=${myID.value}`);
 
                     ws.value.onopen = () => { connected.value = true; };
 
@@ -258,6 +255,7 @@
                         const msg = JSON.parse(e.data);
                         if (msg.type === 'game_state') {
                             state.value = msg.data;
+                            hasReceivedState.value = true;
                             if (!isMyTurn.value) selectedIndexes.value = [];
                         } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
                             eventQueue.value.push({ type: msg.type, data: msg.data });
@@ -288,7 +286,7 @@
                 };
 
                 // ---- 计算属性 ----
-                const myPlayer = computed(() => state.value.players.find(p => p.nickname === myID.value));
+                const myPlayer = computed(() => state.value.players.find(p => p.nickname === joinedAs.value));
                 const myHand = computed(() => myPlayer.value ? myPlayer.value.hand : []);
                 const amIAlive = computed(() => myPlayer.value && myPlayer.value.is_alive);
 
@@ -315,7 +313,7 @@
                     return true;
                 });
 
-                return { currentStep, currentStepData, connected, roomID, myID, connect, state, currentUnix, myHand, selectedIndexes, toggleSelect, canPlay, canCallLiar, playCards, sendAction, isMyTurn, amIAlive };
+                return { hasReceivedState, joinedAs, currentStep, currentStepData, connected, roomID, myID, connect, state, currentUnix, myHand, selectedIndexes, toggleSelect, canPlay, canCallLiar, playCards, sendAction, isMyTurn, amIAlive };
             }
         }).mount('#app');
     </script>
