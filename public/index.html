@@ -105,7 +105,8 @@
 
                 const connect = () => {
                     if (!roomID.value || !myID.value) return;
-                    ws.value = new WebSocket(`ws://localhost:8080/ws?room=${roomID.value}&name=${myID.value}`);
+                    // ws.value = new WebSocket(`ws://localhost:8080/ws?room=${roomID.value}&name=${myID.value}`);
+                    ws.value = new WebSocket(`wss://localhost:8080/ws?room=${roomID.value}&name=${myID.value}`);
                     
                     ws.value.onopen = () => { connected.value = true; };
                     
