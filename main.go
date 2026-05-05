@@ -104,6 +104,13 @@ func (g *Game) StartRound() {
 
 	g.State.TableCard = deck[0]
 	deck = deck[1:]
+	for g.State.TableCard == Two && len(deck) > 0 {
+		g.State.TableCard = deck[0]
+		deck = deck[1:]
+	}
+	if g.State.TableCard == Two {
+		g.State.TableCard = King
+	}
 	g.Log(fmt.Sprintf("新的一轮开始！本轮真牌是: %s", g.State.TableCard))
 
 	aliveCount := 0

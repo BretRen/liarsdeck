@@ -183,6 +183,11 @@
                 </template>
             </div>
 
+            <div v-if="!myPlayer && connected" style="text-align:center; padding:40px;">
+                <h2>👀 观战模式</h2>
+                <p>你正在观看游戏</p>
+            </div>
+
             <div v-if="state.status === 'game_over'">
                 <h1>🏆 游戏结束！获胜者是: {{ state.winner }}</h1>
                 <button @click="sendAction('reset', {})"
