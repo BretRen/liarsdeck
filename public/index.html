@@ -3,964 +3,874 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>说谎者 (Liar's Deck)</title>
+  <title>Liar's Deck</title>
   <script src="https://cdn.jsdelivr.net/npm/vue@3.5.35/dist/vue.global.prod.js">
   </script>
   <style>
-    /* ── Reset & Base ── */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    /* ── Reset ── */
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
-      color: #e8e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
       min-height: 100vh;
-      padding: 16px;
+      padding: 20px;
     }
+    input {
+      font-family: inherit;
+      border: 1.5px solid #d2d2d7;
+      border-radius: 10px;
+      background: #fff;
+      color: #1d1d1f;
+      padding: 10px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus {
+      border-color: #0071e3;
+      box-shadow: 0 0 0 3px rgba(0,113,227,.12);
+    }
+    input::placeholder { color: #86868b; }
     button {
       font-family: inherit;
       cursor: pointer;
       border: none;
       border-radius: 10px;
-      font-weight: 600;
+      font-weight: 500;
+      font-size: 14px;
+      padding: 10px 22px;
       transition: all .2s;
     }
-    button:disabled {
-      opacity: .45;
-      cursor: not-allowed;
-    }
-    input {
-      font-family: inherit;
-      border: 2px solid #3a3a6a;
-      border-radius: 10px;
-      background: #1e1e44;
-      color: #e8e8f0;
-      padding: 10px 14px;
-      font-size: 15px;
-      outline: none;
-      transition: border .2s;
-    }
-    input:focus {
-      border-color: #6c63ff;
-    }
-    input::placeholder {
-      color: #6a6a8a;
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #3a3a6a;
-      border-radius: 3px;
-    }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    #app { max-width: 780px; margin: 0 auto; }
 
-    /* ── App Container ── */
-    #app {
-      max-width: 820px;
-      margin: 0 auto;
-    }
-
-    /* ── Lobby (Pre-join) ── */
+    /* ── Lobby ── */
     .lobby {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 90vh;
+      min-height: 85vh;
       text-align: center;
     }
     .lobby h1 {
-      font-size: 2.6rem;
-      margin-bottom: 6px;
-      background: linear-gradient(90deg, #f7971e, #ffd200);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
     }
     .lobby .subtitle {
-      color: #8a8aaa;
+      color: #86868b;
       font-size: .95rem;
       margin-bottom: 32px;
     }
-    .lobby .card {
-      background: rgba(255, 255, 255, .06);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, .08);
+    .lobby-card {
+      background: #fff;
+      border: 1px solid #e8e8ed;
       border-radius: 18px;
       padding: 32px;
       width: 100%;
-      max-width: 420px;
+      max-width: 400px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
     }
-    .lobby .card .field {
+    .lobby-card .field {
       margin-bottom: 14px;
-    }
-    .lobby .card .field label {
-      display: block;
       text-align: left;
+    }
+    .lobby-card .field label {
+      display: block;
       font-size: .8rem;
-      color: #8a8aaa;
+      font-weight: 500;
+      color: #86868b;
       margin-bottom: 4px;
     }
-    .lobby .card .field input {
-      width: 100%;
-    }
-    .lobby .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 18px;
-      flex-wrap: wrap;
-    }
-    .lobby .actions button {
-      flex: 1;
-      min-width: 100px;
-      padding: 12px 0;
-      font-size: 15px;
-    }
-    .btn-primary {
-      background: #6c63ff;
-      color: #fff;
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: #5a52e0;
-      transform: translateY(-1px);
-    }
-    .btn-secondary {
-      background: #3a3a6a;
-      color: #c8c8e0;
-    }
-    .btn-secondary:hover:not(:disabled) {
-      background: #4a4a7a;
-    }
-    .btn-success {
-      background: #2ecc71;
-      color: #fff;
-    }
-    .btn-success:hover:not(:disabled) {
-      background: #27ae60;
-    }
-    .btn-danger {
-      background: #e74c3c;
-      color: #fff;
-    }
-    .btn-danger:hover:not(:disabled) {
-      background: #c0392b;
-    }
-    .btn-warn {
-      background: #f39c12;
-      color: #fff;
-    }
-    .btn-warn:hover:not(:disabled) {
-      background: #e67e22;
-    }
-    .btn-rules {
+    .lobby-card .field input { width: 100%; }
+    .lobby-card .actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .lobby-card .actions button { flex:1; min-width:90px; }
+
+    .btn-blue { background: #0071e3; color: #fff; }
+    .btn-blue:hover:not(:disabled) { background: #0061d1; }
+    .btn-gray { background: #e8e8ed; color: #1d1d1f; }
+    .btn-gray:hover:not(:disabled) { background: #dcdce0; }
+    .btn-green { background: #34c759; color: #fff; }
+    .btn-green:hover:not(:disabled) { background: #2db84f; }
+    .btn-red { background: #ff3b30; color: #fff; }
+    .btn-red:hover:not(:disabled) { background: #e0352b; }
+    .btn-outline {
       background: transparent;
-      color: #8a8aaa;
-      border: 1px solid #3a3a6a;
-      padding: 10px 18px;
+      color: #0071e3;
+      border: 1.5px solid #0071e3;
+    }
+    .btn-outline:hover { background: rgba(0,113,227,.06); }
+    .btn-outline-gray {
+      background: transparent;
+      color: #86868b;
+      border: 1.5px solid #d2d2d7;
+      padding: 6px 14px;
       font-size: 13px;
-      margin-top: 14px;
     }
-    .btn-rules:hover {
-      border-color: #6c63ff;
-      color: #c8c8e0;
+    .btn-outline-gray:hover { border-color: #86868b; color: #1d1d1f; }
+    .btn-link {
+      background: transparent;
+      color: #86868b;
+      padding: 8px 0;
+      font-size: 13px;
     }
-    .lobby .error {
-      color: #e74c3c;
-      font-size: .85rem;
-      margin-top: 10px;
+    .btn-link:hover { color: #0071e3; }
+
+    .error-text { color: #ff3b30; font-size: .85rem; margin-top: 8px; }
+
+    /* ── Lang toggle ── */
+    .lang-bar {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      display: flex;
+      gap: 4px;
+      z-index: 100;
+    }
+    .lang-bar button {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      background: transparent;
+      color: #86868b;
+      border: 1px solid #d2d2d7;
+    }
+    .lang-bar button.active {
+      background: #0071e3;
+      color: #fff;
+      border-color: #0071e3;
     }
 
-    /* ── Game Layout ── */
-    .game-header {
+    /* ── Game header ── */
+    .g-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 10px;
       padding: 12px 16px;
-      background: rgba(255, 255, 255, .04);
-      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e8e8ed;
+      border-radius: 14px;
       margin-bottom: 14px;
     }
-    .game-header .room-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .game-header .room-code {
+    .g-header .code {
       font-weight: 700;
       font-size: 1.1rem;
       letter-spacing: 2px;
-      color: #f7971e;
+      color: #0071e3;
     }
-    .game-header .invite-btn {
-      background: #2a2a5a;
-      color: #8a8aaa;
-      border: 1px solid #3a3a6a;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: .8rem;
-    }
-    .game-header .invite-btn:hover {
-      background: #3a3a6a;
-      color: #e8e8f0;
-    }
-    .game-header .status-badge {
-      padding: 4px 14px;
+    .g-header .s-badge {
+      padding: 3px 12px;
       border-radius: 20px;
-      font-size: .8rem;
-      font-weight: 600;
+      font-size: .78rem;
+      font-weight: 500;
     }
-    .status-badge.waiting {
-      background: #3a3a6a;
-      color: #8a8aaa;
-    }
-    .status-badge.playing {
-      background: rgba(46, 204, 113, .15);
-      color: #2ecc71;
-    }
-    .status-badge.over {
-      background: rgba(243, 156, 18, .15);
-      color: #f39c12;
-    }
-    .game-header .timer {
+    .s-badge.waiting { background: #f5f5f7; color: #86868b; border:1px solid #e8e8ed; }
+    .s-badge.playing { background: #e8f5e9; color: #2e7d32; }
+    .s-badge.over { background: #fff3e0; color: #e65100; }
+    .g-header .timer {
       font-variant-numeric: tabular-nums;
       font-weight: 600;
-      color: #e74c3c;
-      font-size: .95rem;
+      color: #ff3b30;
+      font-size: .9rem;
     }
 
     /* ── Players ── */
-    .players-area {
+    .players {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       margin-bottom: 14px;
     }
-    .player-box {
+    .p-box {
       flex: 1;
-      min-width: 110px;
-      background: rgba(255, 255, 255, .04);
-      border: 2px solid transparent;
+      min-width: 100px;
+      background: #fff;
+      border: 2px solid #e8e8ed;
       border-radius: 12px;
       padding: 10px 12px;
       text-align: center;
-      transition: all .3s;
+      transition: all .25s;
     }
-    .player-box.active-turn {
-      border-color: #6c63ff;
-      box-shadow: 0 0 20px rgba(108, 99, 255, .3);
-    }
-    .player-box.dead {
-      opacity: .4;
-    }
-    .player-box.spectator-box {
-      border-color: #3a3a6a;
-      border-style: dashed;
-    }
-    .player-box .p-name {
-      font-weight: 600;
-      font-size: .9rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    .player-box .p-name .host-badge {
-      font-size: .7rem;
-      background: linear-gradient(135deg, #f7971e, #ffd200);
-      color: #1a1a3e;
-      border-radius: 4px;
-      padding: 1px 6px;
-      font-weight: 700;
-    }
-    .player-box .p-name .spec-badge {
+    .p-box.active { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.1); }
+    .p-box.dead { opacity: .35; }
+    .p-box.spectator { border-style: dashed; border-color: #d2d2d7; }
+    .p-box .p-name { font-weight: 600; font-size: .9rem; display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; }
+    .p-box .badge { font-size: .65rem; border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+    .badge.host { background: #0071e3; color: #fff; }
+    .badge.spec { background: #e8e8ed; color: #86868b; }
+    .badge.me { color: #0071e3; font-size: .7rem; }
+    .p-box .p-stats { font-size: .75rem; color: #86868b; margin-top: 2px; }
+    .p-box .p-kick {
+      margin-top: 5px;
       font-size: .65rem;
-      background: #3a3a6a;
-      color: #8a8aaa;
-      border-radius: 4px;
-      padding: 1px 6px;
-    }
-    .player-box .p-stats {
-      font-size: .75rem;
-      color: #8a8aaa;
-      margin-top: 2px;
-    }
-    .player-box .p-kick {
-      margin-top: 6px;
-      font-size: .7rem;
       padding: 2px 10px;
       border-radius: 4px;
-      background: rgba(231, 76, 60, .15);
-      color: #e74c3c;
+      background: transparent;
+      color: #ff3b30;
+      border: 1px solid #ff3b30;
     }
-    .player-box .p-kick:hover {
-      background: rgba(231, 76, 60, .3);
-    }
+    .p-box .p-kick:hover { background: #fff0f0; }
 
     /* ── Table ── */
     .table-area {
-      background: rgba(0, 0, 0, .3);
+      background: #fff;
+      border: 1px solid #e8e8ed;
       border-radius: 14px;
       padding: 18px;
       text-align: center;
       margin-bottom: 14px;
-      border: 1px solid rgba(255, 255, 255, .06);
     }
-    .table-area .label {
-      font-size: .8rem;
-      color: #8a8aaa;
-      margin-bottom: 8px;
-    }
-    .table-card {
+    .table-area .t-label { font-size: .8rem; color: #86868b; margin-bottom: 8px; }
+    .t-card {
       display: inline-flex;
-      width: 56px;
-      height: 84px;
+      width: 54px;
+      height: 78px;
       border-radius: 8px;
-      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
-      color: #1a1a3e;
-      font-size: 26px;
-      font-weight: 800;
+      background: #fff;
+      border: 1.5px solid #d2d2d7;
+      color: #1d1d1f;
+      font-size: 24px;
+      font-weight: 700;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
     }
-    .table-area .last-play {
-      font-size: .85rem;
-      color: #c8c8e0;
-      margin-top: 8px;
-    }
-    .table-area .winner-text {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #f7971e;
-      margin-top: 6px;
-    }
+    .table-area .t-info { font-size: .85rem; color: #86868b; margin-top: 8px; }
+    .table-area .winner { font-size: 1.2rem; font-weight: 700; color: #0071e3; margin-top: 6px; }
 
     /* ── Hand ── */
-    .hand-area {
-      margin-bottom: 14px;
-    }
-    .hand-area h3 {
-      font-size: .85rem;
-      color: #8a8aaa;
-      margin-bottom: 8px;
-    }
-    .hand-cards {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .hand-card {
-      width: 56px;
-      height: 84px;
+    .hand-area { margin-bottom: 14px; }
+    .hand-area h3 { font-size: .85rem; color: #86868b; margin-bottom: 8px; }
+    .hand-cards { display: flex; gap: 8px; flex-wrap: wrap; }
+    .h-card {
+      width: 54px; height: 78px;
       border-radius: 8px;
-      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
-      color: #1a1a3e;
-      font-size: 22px;
-      font-weight: 800;
+      background: #fff;
+      border: 2px solid #d2d2d7;
+      color: #1d1d1f;
+      font-size: 20px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       user-select: none;
-      border: 3px solid transparent;
       transition: all .2s;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
     }
-    .hand-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
-    }
-    .hand-card.selected {
-      border-color: #6c63ff;
-      transform: translateY(-10px);
-      box-shadow: 0 8px 24px rgba(108, 99, 255, .35);
-    }
+    .h-card:hover { border-color: #0071e3; transform: translateY(-3px); }
+    .h-card.selected { border-color: #0071e3; transform: translateY(-8px); box-shadow: 0 4px 12px rgba(0,113,227,.2); }
 
     /* ── Actions ── */
-    .actions-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-    .actions-row button {
-      padding: 10px 22px;
-      font-size: 14px;
-    }
+    .act-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 
     /* ── Logs ── */
-    .logs-area {
-      background: rgba(0, 0, 0, .35);
+    .logs {
+      background: #fafafa;
+      border: 1px solid #e8e8ed;
       border-radius: 10px;
       padding: 10px 14px;
-      max-height: 120px;
+      max-height: 110px;
       overflow-y: auto;
-      font-size: .8rem;
+      font-size: .78rem;
       font-family: "SF Mono", "Fira Code", monospace;
       line-height: 1.6;
-      color: #8a8aaa;
+      color: #86868b;
     }
 
-    /* ── Event Overlay ── */
-    .event-overlay {
+    /* ── Overlay ── */
+    .overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
+      top:0; left:0; right:0; bottom:0;
+      z-index:999;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:20px;
       transition: background .3s;
-      padding: 20px;
     }
-    .event-overlay h1 {
-      font-size: 4rem;
-      margin-bottom: 10px;
-    }
-    .event-overlay h2 {
-      font-size: 1.6rem;
-      color: #e8e8f0;
-    }
-    .event-overlay .reveal-cards {
-      display: flex;
-      gap: 10px;
-      margin-top: 16px;
-      justify-content: center;
-    }
-    .event-overlay .reveal-cards .rcard {
-      width: 70px;
-      height: 100px;
-      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
-      color: #1a1a3e;
-      border-radius: 8px;
-      font-size: 30px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
+    .overlay h1 { font-size:3.6rem; margin-bottom:8px; }
+    .overlay h2 { font-size:1.4rem; color:#1d1d1f; }
+    .overlay .rcards { display:flex; gap:10px; margin-top:14px; justify-content:center; }
+    .overlay .rcard {
+      width:64px; height:92px;
+      background:#fff; border:1.5px solid #d2d2d7;
+      color:#1d1d1f; border-radius:8px;
+      font-size:26px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
     }
 
-    /* ── Spectator Notice ── */
-    .spectator-notice {
-      background: rgba(108, 99, 255, .1);
-      border: 1px dashed #6c63ff;
-      border-radius: 10px;
-      padding: 10px 16px;
-      text-align: center;
-      font-size: .85rem;
-      color: #8a8aaa;
-      margin-bottom: 14px;
-    }
-
-    /* ── Rules Modal ── */
-    .modal-overlay {
+    /* ── Modal ── */
+    .modal-bg {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 1000;
-      background: rgba(0, 0, 0, .7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      top:0; left:0; right:0; bottom:0;
+      z-index:1000;
+      background: rgba(0,0,0,.3);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
     }
-    .modal-box {
-      background: #1e1e44;
-      border: 1px solid #3a3a6a;
-      border-radius: 18px;
-      padding: 28px 32px;
-      max-width: 520px;
-      width: 100%;
-      max-height: 80vh;
-      overflow-y: auto;
+    .modal {
+      background:#fff;
+      border:1px solid #e8e8ed;
+      border-radius:18px;
+      padding:28px 32px;
+      max-width:480px;
+      width:100%;
+      max-height:80vh;
+      overflow-y:auto;
     }
-    .modal-box h2 {
-      font-size: 1.3rem;
-      margin-bottom: 16px;
-      color: #f7971e;
-    }
-    .modal-box h3 {
-      font-size: 1rem;
-      color: #c8c8e0;
-      margin: 14px 0 6px;
-    }
-    .modal-box p,
-    .modal-box li {
-      font-size: .85rem;
-      color: #8a8aaa;
-      line-height: 1.6;
-    }
-    .modal-box ul {
-      padding-left: 18px;
-    }
-    .modal-box .close-modal {
-      margin-top: 18px;
-      width: 100%;
-      padding: 10px;
-      font-size: 14px;
-    }
+    .modal h2 { font-size:1.2rem; font-weight:700; margin-bottom:14px; }
+    .modal h3 { font-size:.95rem; font-weight:600; margin:14px 0 4px; }
+    .modal p, .modal li { font-size:.85rem; color:#515154; line-height:1.6; }
+    .modal ul { padding-left:18px; }
+    .modal .m-btn { width:100%; margin-top:16px; padding:10px; }
 
     /* ── Toast ── */
     .toast {
       position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e1e44;
-      border: 1px solid #3a3a6a;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-size: .85rem;
-      z-index: 1001;
-      animation: fadeInUp .3s;
+      bottom:24px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#1d1d1f;
+      color:#fff;
+      padding:10px 22px;
+      border-radius:10px;
+      font-size:.85rem;
+      z-index:1001;
+      animation:fadeUp .3s;
     }
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-      }
-    }
+    @keyframes fadeUp { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
 
-    /* ── Responsive ── */
-    @media (max-width: 500px) {
-      body {
-        padding: 10px;
-      }
-      .lobby h1 {
-        font-size: 2rem;
-      }
-      .lobby .card {
-        padding: 20px;
-      }
-      .player-box {
-        min-width: 80px;
-        padding: 8px;
-      }
-      .player-box .p-name {
-        font-size: .8rem;
-      }
-      .game-header {
-        padding: 10px 12px;
-      }
-      .event-overlay h1 {
-        font-size: 2.6rem;
-      }
-      .event-overlay h2 {
-        font-size: 1.2rem;
-      }
+    /* ── Resp ── */
+    @media(max-width:500px){
+      body { padding:10px; }
+      .lobby h1 { font-size:2rem; }
+      .lobby-card { padding:20px; }
+      .p-box { min-width:70px; padding:8px; }
     }
   </style>
 </head>
 <body>
 
-  <div id="app">
-    <!-- ── Lobby ── -->
-    <div v-if="!connected" class="lobby">
-      <h1>🃏 说谎者</h1>
-      <p class="subtitle">Liar's Deck — 心理博弈卡牌游戏</p>
-      <div class="card">
-        <div class="field">
-          <label>你的昵称</label>
-          <input v-model="nickname" placeholder="输入昵称..." @keyup.enter="tryCreate" maxlength="12" />
+<div id="app">
+
+  <!-- Language toggle -->
+  <div class="lang-bar">
+    <button :class="{active:lang==='zh'}" @click="lang='zh'">中文</button>
+    <button :class="{active:lang==='en'}" @click="lang='en'">EN</button>
+  </div>
+
+  <!-- ─── LOBBY ─── -->
+  <div v-if="!connected" class="lobby">
+    <h1>🃏 Liar's Deck</h1>
+    <p class="subtitle">{{ t('subtitle') }}</p>
+    <div class="lobby-card">
+      <div class="field">
+        <label>{{ t('nickname') }}</label>
+        <input v-model="nickname" :placeholder="t('nickname_ph')" maxlength="12"
+               @keyup.enter="tab==='create'?tryCreate():tab==='join'?tryJoin():trySpectate()" />
+      </div>
+
+      <!-- Create mode -->
+      <template v-if="tab==='create'">
+        <div class="actions">
+          <button class="btn-blue" @click="tryCreate">{{ t('create') }}</button>
+          <button class="btn-gray" @click="tab='join'">{{ t('join') }}</button>
+          <button class="btn-gray" @click="tab='spectate'">{{ t('spectate') }}</button>
         </div>
-        <div class="field" v-if="tab === 'join' || tab === 'spectate'">
-          <label>房间码</label>
-          <input v-model="roomCodeInput" placeholder="如：ABC123" @keyup.enter="tab === 'join' ? tryJoin() : trySpectate()"
-          maxlength="6" style="text-transform:uppercase;letter-spacing:3px;font-weight:700;" />
+      </template>
+
+      <!-- Join mode -->
+      <template v-if="tab==='join'">
+        <div class="field">
+          <label>{{ t('room_code') }}</label>
+          <input v-model="roomCodeInput" :placeholder="t('code_ph')" maxlength="6"
+                 style="text-transform:uppercase;letter-spacing:3px;font-weight:700;"
+                 @keyup.enter="tryJoin" />
         </div>
         <div class="actions">
-          <button class="btn-primary" @click="tryCreate">创建房间</button>
-          <button class="btn-secondary" @click="tab = 'join'">加入房间</button>
-          <button class="btn-secondary" @click="tab = 'spectate'">观战</button>
+          <button class="btn-blue" @click="tryJoin">{{ t('join_btn') }}</button>
+          <button class="btn-gray" @click="tab='create'">← {{ t('back') }}</button>
         </div>
-        <div v-if="tab !== 'create'" style="margin-top:6px;">
-          <button class="btn-secondary" style="width:100%;padding:8px;font-size:13px;" @click="tab = 'create'">
-            ← 返回
-          </button>
+      </template>
+
+      <!-- Spectate mode -->
+      <template v-if="tab==='spectate'">
+        <div class="field">
+          <label>{{ t('room_code') }}</label>
+          <input v-model="roomCodeInput" :placeholder="t('code_ph')" maxlength="6"
+                 style="text-transform:uppercase;letter-spacing:3px;font-weight:700;"
+                 @keyup.enter="trySpectate" />
         </div>
-        <div class="error" v-if="errorMsg">{{ errorMsg }}</div>
+        <div class="actions">
+          <button class="btn-blue" @click="trySpectate">{{ t('spectate_btn') }}</button>
+          <button class="btn-gray" @click="tab='create'">← {{ t('back') }}</button>
+        </div>
+      </template>
+
+      <div class="error-text" v-if="errorMsg">{{ errorMsg }}</div>
+    </div>
+    <button class="btn-link" @click="showRules=true">📖 {{ t('rules') }}</button>
+  </div>
+
+  <!-- ─── RULES MODAL ─── -->
+  <div class="modal-bg" v-if="showRules" @click.self="showRules=false">
+    <div class="modal">
+      <h2>{{ t('rules_title') }}</h2>
+      <h3>🎯 {{ t('r_goal') }}</h3>
+      <p>{{ t('r_goal_desc') }}</p>
+      <h3>🃏 {{ t('r_deck') }}</h3>
+      <p>{{ t('r_deck_desc') }}</p>
+      <h3>🔁 {{ t('r_turn') }}</h3>
+      <ul>
+        <li>{{ t('r_turn1') }}</li>
+        <li>{{ t('r_turn2') }}</li>
+        <li>{{ t('r_turn3') }}</li>
+        <li>{{ t('r_wild') }}</li>
+      </ul>
+      <h3>🚨 {{ t('r_liar') }}</h3>
+      <ul>
+        <li>{{ t('r_liar1') }}</li>
+        <li>{{ t('r_liar2') }}</li>
+        <li>{{ t('r_liar3') }}</li>
+      </ul>
+      <h3>🔫 {{ t('r_gun') }}</h3>
+      <ul>
+        <li>{{ t('r_gun1') }}</li>
+        <li>{{ t('r_gun2') }}</li>
+      </ul>
+      <h3>👑 {{ t('r_host') }}</h3>
+      <ul>
+        <li>{{ t('r_host1') }}</li>
+        <li>{{ t('r_host2') }}</li>
+        <li>{{ t('r_host3') }}</li>
+      </ul>
+      <h3>👀 {{ t('r_spec') }}</h3>
+      <ul><li>{{ t('r_spec1') }}</li></ul>
+      <button class="btn-blue m-btn" @click="showRules=false">{{ t('gotit') }}</button>
+    </div>
+  </div>
+
+  <!-- ─── IN-GAME ─── -->
+  <template v-else>
+    <!-- Header -->
+    <div class="g-header">
+      <div>
+        <span class="code">{{ state.room_code }}</span>
+        <button class="btn-outline-gray" style="margin-left:6px;" @click="copyInvite">📋 {{ t('invite') }}</button>
       </div>
-      <button class="btn-rules" @click="showRules = true">📖 游戏规则</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="s-badge" :class="state.status">{{ statusLabel }}</span>
+        <span class="timer" v-if="state.status==='playing' && state.deadline">
+          ⏱ {{ Math.max(0,state.deadline-currentUnix) }}s
+        </span>
+        <button class="btn-outline-gray" style="padding:3px 10px;font-size:.7rem;" @click="showRules=true">{{ t('rules') }}</button>
+      </div>
     </div>
 
-    <!-- ── Rules Modal ── -->
-    <div class="modal-overlay" v-if="showRules" @click.self="showRules = false">
-      <div class="modal-box">
-        <h2>📖 游戏规则</h2>
-        <h3>🎯 目标</h3>
-        <p>成为最后一个存活者，或者先打完所有手牌。</p>
-        <h3>🃏 牌组</h3>
-        <p>24张牌：K（王）、Q（后）、A（尖）、2（万能牌），每种6张。</p>
-        <h3>🔁 回合流程</h3>
-        <ul>
-          <li>每轮翻出一张 <strong>真牌</strong>，每人发5张手牌</li>
-          <li>轮到你的回合，选 1-3 张牌 <strong>背面向下</strong> 打出，并声称它们是真牌</li>
-          <li><strong>你可以说谎</strong>——打出的牌可以不是真牌！</li>
-          <li>2（万能牌）可以当作任何牌</li>
-        </ul>
-        <h3>🚨 质疑（Call Liar）</h3>
-        <ul>
-          <li>下家可以选择 <strong>质疑</strong> 上家说谎</li>
-          <li>掀开底牌验证：如果牌不是真牌也不是2 → 质疑成功，出牌者被枪击</li>
-          <li>否则质疑失败，质疑者被枪击</li>
-        </ul>
-        <h3>🔫 左轮手枪</h3>
-        <ul>
-          <li>6发弹仓，1发致命弹，随机排列</li>
-          <li>被击中时随机触发，运气决定生死</li>
-        </ul>
-        <h3>👑 房主操作</h3>
-        <ul>
-          <li>房主可以移除房间内的玩家</li>
-          <li>房主可随时开始游戏（需至少2名玩家）</li>
-          <li>房主离开时自动转让</li>
-        </ul>
-        <h3>👀 观战</h3>
-        <ul>
-          <li>观众可以实时观看对局，但无法操作</li>
-        </ul>
-        <button class="btn-primary close-modal" @click="showRules = false">知道了</button>
-      </div>
+    <!-- Spectator notice -->
+    <div style="background:#f0f7ff;border:1px dashed #0071e3;border-radius:10px;padding:8px 14px;text-align:center;font-size:.85rem;color:#86868b;margin-bottom:14px;" v-if="isSpectator">
+      👀 {{ t('spec_notice') }}
     </div>
 
-    <!-- ── In-Game ── -->
-    <template v-else>
-      <!-- Header -->
-      <div class="game-header">
-        <div class="room-info">
-          <span class="room-code">{{ state.room_code }}</span>
-          <button class="invite-btn" @click="copyInvite">📋 邀请</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span class="status-badge" :class="state.status">{{ statusLabel }}</span>
-          <span class="timer" v-if="state.status === 'playing' && state.deadline">
-            ⏱ {{ Math.max(0, state.deadline - currentUnix) }}s
-          </span>
-          <button class="btn-rules" style="padding:3px 12px;font-size:.75rem;margin:0;" @click="showRules = true">规则</button>
-        </div>
-      </div>
-
-      <!-- Spectator notice -->
-      <div class="spectator-notice" v-if="isSpectator">
-        👀 你以观众身份加入，可以实时观看对局
-      </div>
-
-      <!-- Players -->
-      <div class="players-area">
-        <div v-for="(p, idx) in state.players" :key="p.id" class="player-box"
-        :class="{ 'active-turn': state.status === 'playing' && state.current_turn === idx && !p.is_spectator, 'dead': !p.is_alive && !p.is_spectator, 'spectator-box': p.is_spectator }">
+    <!-- Players -->
+    <div class="players">
+      <div v-for="(p,idx) in state.players" :key="p.id" class="p-box"
+        :class="{ active: state.status==='playing' && state.current_turn===idx && !p.is_spectator, dead: !p.is_alive && !p.is_spectator, spectator: p.is_spectator }">
         <div class="p-name">
           {{ p.nickname }}
-          <span class="host-badge" v-if="p.is_host">房主</span>
-          <span class="spec-badge" v-if="p.is_spectator">观众</span>
-          <span v-if="p.nickname === myNickname" style="color:#6c63ff;font-size:.7rem;">(我)</span>
+          <span class="badge host" v-if="p.is_host">{{ t('host') }}</span>
+          <span class="badge spec" v-if="p.is_spectator">{{ t('spec') }}</span>
+          <span class="badge me" v-if="p.nickname===myNickname">({{ t('me') }})</span>
         </div>
         <div class="p-stats" v-if="!p.is_spectator">
-          {{ p.is_alive ? '💀 ' + p.bullets + '/6  | 🃏 ' + p.hand.length : '💀 已阵亡' }}
+          {{ p.is_alive ? '💀 '+p.bullets+'/6  | 🃏 '+p.hand.length : t('dead') }}
         </div>
-        <div class="p-stats" v-else style="color:#6a6a8a;">👀 观战中</div>
-        <button class="p-kick" v-if="amHost && !p.is_host && p.id !== myId" @click="kickPlayer(p.id)">
-          移除
-        </button>
+        <div class="p-stats" v-else style="color:#aeaeb2;">👀 {{ t('watching') }}</div>
+        <button class="p-kick" v-if="amHost && !p.is_host && p.id!==myId" @click="kickPlayer(p.id)">{{ t('kick') }}</button>
       </div>
     </div>
 
     <!-- Table -->
-    <div class="table-area" v-if="state.status === 'playing'">
-      <div class="label">本轮真牌</div>
-      <div class="table-card">{{ state.table_card }}</div>
-      <div class="last-play" v-if="state.last_played_cnt > 0">
-        上家背面向下打了 {{ state.last_played_cnt }} 张牌
+    <div class="table-area" v-if="state.status==='playing'">
+      <div class="t-label">{{ t('true_card') }}</div>
+      <div class="t-card">{{ state.table_card }}</div>
+      <div class="t-info" v-if="state.last_played_cnt>0">
+        {{ t('last_play') }} {{ state.last_played_cnt }} {{ t('cards_face') }}
       </div>
     </div>
-    <div class="table-area" v-if="state.status === 'game_over'">
-      <div class="winner-text" v-if="state.winner">🏆 {{ state.winner }} 获胜！</div>
-      <div class="winner-text" v-else>🏆 游戏结束</div>
-      <button class="btn-success" style="margin-top:10px;padding:8px 24px;" @click="sendAction('reset',{})" v-if="amHost">
-        🔄 再来一局
+    <div class="table-area" v-if="state.status==='game_over'">
+      <div class="winner">{{ t('winner') }}: {{ state.winner || '—' }}</div>
+      <button class="btn-green" style="margin-top:10px;padding:8px 24px;" @click="sendAction('reset',{})" v-if="amHost">
+        🔄 {{ t('play_again') }}
       </button>
-      <p v-else style="font-size:.8rem;color:#8a8aaa;margin-top:8px;">等待房主重新开始...</p>
+      <p v-else style="font-size:.8rem;color:#86868b;margin-top:8px;">{{ t('wait_host') }}</p>
     </div>
 
     <!-- Waiting actions -->
-    <div class="actions-row" v-if="state.status === 'waiting'">
-      <button class="btn-primary" @click="sendAction('start',{})" :disabled="!canStart">
-        开始游戏 {{ canStart ? '' : '(需至少2名玩家)' }}
+    <div class="act-row" v-if="state.status==='waiting'">
+      <button class="btn-blue" @click="sendAction('start',{})" :disabled="!canStart">
+        {{ t('start_game') }}{{ canStart ? '' : ' ('+t('need_players')+')' }}
       </button>
     </div>
 
     <!-- Hand -->
-    <div class="hand-area" v-if="isPlayer && state.status === 'playing'">
-      <h3>我的手牌（点击选择）</h3>
+    <div class="hand-area" v-if="isPlayer && state.status==='playing'">
+      <h3>{{ t('my_hand') }}</h3>
       <div class="hand-cards">
-        <div v-for="(c, i) in myHand" :key="i" class="hand-card"
-        :class="{selected: selectedIndexes.includes(i)}"
-        @click="toggleSelect(i)">
-        {{ c }}
+        <div v-for="(c,i) in myHand" :key="i" class="h-card"
+          :class="{selected:selectedIndexes.includes(i)}"
+          @click="toggleSelect(i)">{{ c }}</div>
       </div>
     </div>
+
+    <!-- Actions -->
+    <div class="act-row" v-if="isPlayer && state.status==='playing' && isMyTurn">
+      <button class="btn-blue" :disabled="!canPlay" @click="playCards">
+        {{ t('play') }} (1-3)
+      </button>
+      <button class="btn-red" :disabled="!canCallLiar" @click="sendAction('call_liar',{})">
+        🚨 {{ t('liar') }}
+      </button>
+    </div>
+
+    <!-- Logs -->
+    <div class="logs" v-if="state.logs&&state.logs.length">
+      <div v-for="(log,i) in state.logs" :key="i">{{ log }}</div>
+    </div>
+  </template>
+
+  <!-- ─── EVENT OVERLAY ─── -->
+  <div class="overlay" v-if="currentStep!==''" :style="{background: overlayBg}">
+    <template v-if="currentStep==='liar_call'">
+      <h1>🚨</h1>
+      <h2>{{ currentStepData.caller }} {{ t('calls') }} {{ currentStepData.accused }}!</h2>
+    </template>
+    <template v-if="currentStep==='reveal'">
+      <h2 style="margin-bottom:6px;">{{ currentStepData.accused }}'s {{ t('cards_label') }}</h2>
+      <div class="rcards">
+        <div v-for="(c,i) in currentStepData.cards" :key="i" class="rcard">{{ c }}</div>
+      </div>
+    </template>
+    <template v-if="currentStep==='shot'">
+      <h1>{{ currentStepData.fatal?'💥':'💨' }}</h1>
+      <h2>{{ currentStepData.fatal ? t('bang') : t('click') }}</h2>
+      <p style="color:#86868b;margin-top:4px;">{{ currentStepData.target }}</p>
+    </template>
   </div>
 
-  <!-- Actions -->
-  <div class="actions-row" v-if="isPlayer && state.status === 'playing' && isMyTurn">
-    <button class="btn-primary" :disabled="!canPlay" @click="playCards">
-      出牌 (选1-3张)
-    </button>
-    <button class="btn-danger" :disabled="!canCallLiar" @click="sendAction('call_liar',{})">
-      🚨 说谎！
-    </button>
-  </div>
-
-  <!-- Logs -->
-  <div class="logs-area" v-if="state.logs && state.logs.length">
-    <div v-for="(log, i) in state.logs" :key="i">{{ log }}</div>
-  </div>
-</template>
-
-<!-- ── Event Overlay ── -->
-<div class="event-overlay" v-if="currentStep !== ''"
-:style="{ background: overlayBg }">
-<template v-if="currentStep === 'liar_call'">
-  <h1>🚨</h1>
-  <h2>{{ currentStepData.caller }} 质疑 {{ currentStepData.accused }} 说谎！</h2>
-</template>
-<template v-if="currentStep === 'reveal'">
-  <h2 style="margin-bottom:6px;">{{ currentStepData.accused }} 的底牌</h2>
-  <div class="reveal-cards">
-    <div v-for="(c, i) in currentStepData.cards" :key="i" class="rcard">{{ c }}</div>
-  </div>
-</template>
-<template v-if="currentStep === 'shot'">
-  <h1>{{ currentStepData.fatal ? '💥' : '💨' }}</h1>
-  <h2>{{ currentStepData.fatal ? '砰！' : '咔哒...' }}</h2>
-  <p style="color:#8a8aaa;margin-top:4px;">{{ currentStepData.target }}</p>
-</template>
-</div>
-
-<!-- ── Toast ── -->
-<div class="toast" v-if="toast">{{ toast }}</div>
+  <!-- Toast -->
+  <div class="toast" v-if="toast">{{ toast }}</div>
 </div>
 
 <script>
-  const { createApp, ref, computed, watch, onUnmounted, nextTick } = Vue;
+const { createApp, ref, computed, watchEffect } = Vue;
 
-  createApp({
-    setup() {
-      // ── State ──
-      const nickname = ref('Player' + Math.floor(Math.random() * 100));
-      const roomCodeInput = ref('');
-      const tab = ref('create');
-      const connected = ref(false);
-      const ws = ref(null);
-      const state = ref({ players: [], logs: [], deadline: 0, room_code: '' });
-      const currentUnix = ref(Math.floor(Date.now() / 1000));
-      const selectedIndexes = ref([]);
-      const eventQueue = ref([]);
-      const processingEvent = ref(false);
-      const currentStep = ref('');
-      const currentStepData = ref({});
-      const myNickname = ref('');
-      const toast = ref('');
-      const showRules = ref(false);
-      const errorMsg = ref('');
-      let toastTimer = null;
+const i18n = {
+  zh: {
+    subtitle: '心理博弈卡牌游戏',
+    nickname: '你的昵称',
+    nickname_ph: '输入昵称...',
+    create: '🎲 创建房间',
+    join: '加入房间',
+    spectate: '观战',
+    room_code: '房间码',
+    code_ph: '如：ABC123',
+    join_btn: '✅ 加入',
+    spectate_btn: '👀 观战',
+    back: '返回',
+    rules: '游戏规则',
+    rules_title: '📖 游戏规则',
+    r_goal: '目标',
+    r_goal_desc: '成为最后一个存活者，或者先打完所有手牌。',
+    r_deck: '牌组',
+    r_deck_desc: '24张牌：K（王）、Q（后）、A（尖）、2（万能牌），每种6张。',
+    r_turn: '回合流程',
+    r_turn1: '每轮翻出一张真牌，每人发5张手牌',
+    r_turn2: '轮到你的回合，选 1-3 张牌背面向下打出，并声称是真牌',
+    r_turn3: '你可以说谎——打出的牌可以不是真牌！',
+    r_wild: '2（万能牌）可以当作任何牌',
+    r_liar: '质疑（Call Liar）',
+    r_liar1: '下家可以选择质疑上家说谎',
+    r_liar2: '掀开底牌验证：如果牌不是真牌也不是2 → 质疑成功，出牌者被枪击',
+    r_liar3: '否则质疑失败，质疑者被枪击',
+    r_gun: '左轮手枪',
+    r_gun1: '6发弹仓，1发致命弹，随机排列',
+    r_gun2: '被击中时随机触发，运气决定生死',
+    r_host: '房主操作',
+    r_host1: '房主可以移除房间内的玩家',
+    r_host2: '房主可随时开始游戏（需至少2名玩家）',
+    r_host3: '房主离开时自动转让',
+    r_spec: '观战',
+    r_spec1: '观众可以实时观看对局，但无法操作',
+    gotit: '知道了',
+    invite: '邀请',
+    host: '房主',
+    spec: '观众',
+    me: '我',
+    dead: '💀 已阵亡',
+    watching: '观战中',
+    kick: '移除',
+    true_card: '本轮真牌',
+    last_play: '上家背面向下打了',
+    cards_face: '张牌',
+    winner: '🏆 获胜者',
+    play_again: '再来一局',
+    wait_host: '等待房主重新开始...',
+    start_game: '开始游戏',
+    need_players: '需至少2名玩家',
+    my_hand: '我的手牌（点击选择）',
+    play: '出牌',
+    liar: '说谎！',
+    calls: '质疑',
+    cards_label: '的底牌',
+    bang: '砰！',
+    click: '咔哒...',
+    spec_notice: '你以观众身份加入，可以实时观看对局',
+    waiting: '等待中',
+    playing: '游戏中',
+    over: '已结束',
+    disconnected: '连接已断开',
+    err_nick: '请输入昵称',
+    err_code: '请输入房间码',
+    copied: '已复制邀请链接',
+  },
+  en: {
+    subtitle: 'A psychological bluffing card game',
+    nickname: 'Your Nickname',
+    nickname_ph: 'Enter nickname...',
+    create: '🎲 Create Room',
+    join: 'Join Room',
+    spectate: 'Spectate',
+    room_code: 'Room Code',
+    code_ph: 'e.g. ABC123',
+    join_btn: '✅ Join',
+    spectate_btn: '👀 Spectate',
+    back: 'Back',
+    rules: 'Rules',
+    rules_title: '📖 Game Rules',
+    r_goal: 'Goal',
+    r_goal_desc: 'Be the last player standing, or be the first to empty your hand.',
+    r_deck: 'Deck',
+    r_deck_desc: '24 cards: K (King), Q (Queen), A (Ace), 2 (Wild), 6 of each.',
+    r_turn: 'Turn Flow',
+    r_turn1: 'Each round reveals a True Card, each player draws 5',
+    r_turn2: 'On your turn, play 1-3 cards face-down and claim they match the True Card',
+    r_turn3: 'You can lie — the cards you play don\'t have to be true!',
+    r_wild: '2 (Wild) can be played as any card',
+    r_liar: 'Calling Liar',
+    r_liar1: 'The next player may call the previous player a liar',
+    r_liar2: 'Cards are revealed: if not true and not 2 → liar succeeds, the bluffer gets shot',
+    r_liar3: 'Otherwise the caller gets shot',
+    r_gun: 'Revolver',
+    r_gun1: '6 chambers, 1 fatal bullet, randomly shuffled',
+    r_gun2: 'When shot, fate is random',
+    r_host: 'Host Controls',
+    r_host1: 'Host can remove players from the room',
+    r_host2: 'Host can start the game (needs 2+ players)',
+    r_host3: 'Host transfers automatically on leave',
+    r_spec: 'Spectating',
+    r_spec1: 'Spectators watch the game live but cannot interact',
+    gotit: 'Got it',
+    invite: 'Invite',
+    host: 'Host',
+    spec: 'Spec',
+    me: 'Me',
+    dead: '💀 Dead',
+    watching: 'Watching',
+    kick: 'Remove',
+    true_card: 'True Card',
+    last_play: 'Previous player played',
+    cards_face: 'cards face-down',
+    winner: '🏆 Winner',
+    play_again: 'Play Again',
+    wait_host: 'Waiting for host to restart...',
+    start_game: 'Start Game',
+    need_players: 'Need 2+ players',
+    my_hand: 'My Hand (click to select)',
+    play: 'Play',
+    liar: 'Call Liar!',
+    calls: 'calls out',
+    cards_label: '\'s cards',
+    bang: 'BANG!',
+    click: 'Click...',
+    spec_notice: 'You joined as a spectator — watching the game live.',
+    waiting: 'Waiting',
+    playing: 'Playing',
+    over: 'Game Over',
+    disconnected: 'Connection lost',
+    err_nick: 'Please enter a nickname',
+    err_code: 'Please enter a room code',
+    copied: 'Invite link copied',
+  }
+};
 
-      // ── Clock ──
-      setInterval(() => { currentUnix.value = Math.floor(Date.now() / 1000); }, 1000);
+createApp({
+  setup() {
+    // ── State ──
+    const nickname = ref('Player' + Math.floor(Math.random()*100));
+    const roomCodeInput = ref('');
+    const tab = ref('create');
+    const connected = ref(false);
+    const ws = ref(null);
+    const state = ref({ players:[], logs:[], deadline:0, room_code:'' });
+    const currentUnix = ref(Math.floor(Date.now()/1000));
+    const selectedIndexes = ref([]);
+    const eventQueue = ref([]);
+    const processingEvent = ref(false);
+    const currentStep = ref('');
+    const currentStepData = ref({});
+    const myNickname = ref('');
+    const toast = ref('');
+    const showRules = ref(false);
+    const errorMsg = ref('');
+    const lang = ref(localStorage.getItem('liarsdeck-lang') || 'zh');
+    let toastTimer = null;
 
-      // ── Computed ──
-      const statusLabel = computed(() => {
-        const m = { waiting: '等待中', playing: '游戏中', game_over: '已结束' };
-        return m[state.value.status] || state.value.status;
-      });
+    setInterval(() => { currentUnix.value = Math.floor(Date.now()/1000); }, 1000);
 
-      const myPlayer = computed(() =>
-        state.value.players.find(p => p.nickname === myNickname.value)
-      );
+    // ── i18n ──
+    function t(key) { return (i18n[lang.value]||i18n.zh)[key]||key; }
 
-      const myId = computed(() => myPlayer.value ? myPlayer.value.id : '');
-      const myHand = computed(() => myPlayer.value ? (myPlayer.value.hand || []) : []);
-      const isPlayer = computed(() => myPlayer.value && !myPlayer.value.is_spectator);
-      const isSpectator = computed(() => myPlayer.value && myPlayer.value.is_spectator);
-      const amIAlive = computed(() => myPlayer.value && myPlayer.value.is_alive);
-      const amHost = computed(() => myPlayer.value && myPlayer.value.is_host);
+    // ── Computed ──
+    const statusLabel = computed(() => {
+      const m = { waiting: t('waiting'), playing: t('playing'), game_over: t('over') };
+      return m[state.value.status] || state.value.status;
+    });
 
-      const isMyTurn = computed(() => {
-        if (!state.value.players || state.value.current_turn === -1 || !myPlayer.value) return false;
-        return state.value.players[state.value.current_turn].id === myId.value;
-      });
+    const myPlayer = computed(() => state.value.players.find(p => p.nickname === myNickname.value));
+    const myId = computed(() => myPlayer.value ? myPlayer.value.id : '');
+    const myHand = computed(() => myPlayer.value ? (myPlayer.value.hand||[]) : []);
+    const isPlayer = computed(() => myPlayer.value && !myPlayer.value.is_spectator);
+    const isSpectator = computed(() => myPlayer.value && myPlayer.value.is_spectator);
+    const amHost = computed(() => myPlayer.value && myPlayer.value.is_host);
 
-      const prevPlayerEmpty = computed(() => {
-        if (state.value.last_player === -1) return false;
-        if (state.value.last_player >= state.value.players.length) return false;
-        return state.value.players[state.value.last_player].hand.length === 0;
-      });
+    const isMyTurn = computed(() => {
+      if (!state.value.players || state.value.current_turn===-1 || !myPlayer.value) return false;
+      return state.value.players[state.value.current_turn].id === myId.value;
+    });
 
-      const canPlay = computed(() => {
-        if (!isMyTurn.value) return false;
-        return selectedIndexes.value.length >= 1 && selectedIndexes.value.length <= 3;
-      });
+    const canPlay = computed(() => isMyTurn.value && selectedIndexes.value.length>=1 && selectedIndexes.value.length<=3);
+    const canCallLiar = computed(() => isMyTurn.value && state.value.last_player!==-1 && state.value.last_player!==state.value.current_turn);
 
-      const canCallLiar = computed(() => {
-        if (!isMyTurn.value) return false;
-        if (state.value.last_player === -1) return false;
-        if (state.value.last_player === state.value.current_turn) return false;
-        return true;
-      });
+    const canStart = computed(() => {
+      if (!amHost.value) return false;
+      return state.value.players.filter(p=>!p.is_spectator).length >= 2;
+    });
 
-      const canStart = computed(() => {
-        const players = state.value.players.filter(p => !p.is_spectator);
-        return amHost.value && players.length >= 2;
-      });
+    const overlayBg = computed(() => currentStep.value==='liar_call' ? 'rgba(255,59,48,.12)' : 'rgba(0,0,0,.06)');
 
-      const overlayBg = computed(() => {
-        if (currentStep.value === 'liar_call') return 'rgba(200,0,0,0.8)';
-        return 'rgba(0,0,0,0.8)';
-      });
+    // ── Event queue ──
+    function processQueue() {
+      if (processingEvent.value || eventQueue.value.length===0) return;
+      processingEvent.value = true;
+      const ev = eventQueue.value.shift();
+      currentStep.value = ev.type;
+      currentStepData.value = ev.data;
+      const dur = { liar_call:1800, reveal:2600, shot:2000 };
+      setTimeout(() => { currentStep.value=''; processingEvent.value=false; processQueue(); }, dur[ev.type]||2000);
+    }
 
-      // ── Event Queue ──
-      function processQueue() {
-        if (processingEvent.value || eventQueue.value.length === 0) return;
-        processingEvent.value = true;
-        const ev = eventQueue.value.shift();
-        currentStep.value = ev.type;
-        currentStepData.value = ev.data;
-        const dur = { liar_call: 1800, reveal: 2600, shot: 2000 };
-        setTimeout(() => {
-          currentStep.value = '';
-          processingEvent.value = false;
-          processQueue();
-        }, dur[ev.type] || 2000);
-      }
+    // ── Toast ──
+    function showToast(msg, dur=2000) {
+      toast.value = msg;
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.value=''; }, dur);
+    }
 
-      // ── Toast ──
-      function showToast(msg, dur = 2000) {
-        toast.value = msg;
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => { toast.value = ''; }, dur);
-      }
-
-      // ── Connect ──
-      function doConnect(url, name) {
-        errorMsg.value = '';
-        myNickname.value = name;
-        ws.value = new WebSocket(url);
-        ws.value.onopen = () => { connected.value = true; };
-        ws.value.onclose = () => {
-          if (connected.value) {
-            showToast('连接已断开');
-            setTimeout(() => { connected.value = false; }, 1500);
-          }
-        };
-        ws.value.onmessage = (e) => {
+    // ── Connect ──
+    function doConnect(url, name) {
+      errorMsg.value = '';
+      myNickname.value = name;
+      ws.value = new WebSocket(url);
+      ws.value.onopen = () => { connected.value = true; };
+      ws.value.onclose = () => {
+        if (connected.value) { showToast(t('disconnected')); setTimeout(()=>{connected.value=false;},1500); }
+      };
+      ws.value.onmessage = (e) => {
+        try {
           const msg = JSON.parse(e.data);
-          if (msg.error) {
-            errorMsg.value = msg.error;
-            return;
-          }
+          if (msg.error) { errorMsg.value = msg.error; return; }
           if (msg.type === 'game_state') {
             state.value = msg.data;
             if (!isMyTurn.value) selectedIndexes.value = [];
-          } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
-            eventQueue.value.push({ type: msg.type, data: msg.data });
+          } else if (['liar_call','reveal','shot'].includes(msg.type)) {
+            eventQueue.value.push({ type:msg.type, data:msg.data });
             processQueue();
           }
-        };
-      }
-
-      function tryCreate() {
-        if (!nickname.value.trim()) { errorMsg.value = '请输入昵称'; return; }
-        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        doConnect(`${proto}://${window.location.host}/ws?action=create&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
-      }
-
-      function tryJoin() {
-        if (!nickname.value.trim()) { errorMsg.value = '请输入昵称'; return; }
-        if (!roomCodeInput.value.trim()) { errorMsg.value = '请输入房间码'; return; }
-        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        doConnect(`${proto}://${window.location.host}/ws?action=join&code=${encodeURIComponent(roomCodeInput.value.trim().toUpperCase())}&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
-      }
-
-      function trySpectate() {
-        if (!nickname.value.trim()) { nickname.value = '观众' + Math.floor(Math.random() * 100); }
-        if (!roomCodeInput.value.trim()) { errorMsg.value = '请输入房间码'; return; }
-        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        doConnect(`${proto}://${window.location.host}/ws?action=spectate&code=${encodeURIComponent(roomCodeInput.value.trim().toUpperCase())}&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
-      }
-
-      // ── In-game actions ──
-      const sendAction = (action, payload) => {
-        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-          ws.value.send(JSON.stringify({ action, payload }));
-        }
-      };
-
-      const toggleSelect = (idx) => {
-        if (!isMyTurn.value) return;
-        const pos = selectedIndexes.value.indexOf(idx);
-        if (pos > -1) {
-          selectedIndexes.value.splice(pos, 1);
-        } else {
-          if (selectedIndexes.value.length < 3) selectedIndexes.value.push(idx);
-        }
-      };
-
-      const playCards = () => {
-        const cards = selectedIndexes.value.map(idx => myHand.value[idx]);
-        sendAction('play_cards', { cards });
-        selectedIndexes.value = [];
-      };
-
-      const kickPlayer = (targetId) => {
-        sendAction('remove_player', { target_id: targetId });
-      };
-
-      const copyInvite = () => {
-        const link = window.location.origin + '?room=' + state.value.room_code;
-        navigator.clipboard.writeText(link).then(() => {
-          showToast('✅ 邀请链接已复制: ' + link);
-        }).catch(() => {
-          showToast('📋 ' + link);
-        });
-      };
-
-      // ── Join from URL ──
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('room')) {
-        roomCodeInput.value = params.get('room').toUpperCase();
-        tab.value = 'join';
-      }
-
-      return {
-        nickname, roomCodeInput, tab, connected, state, currentUnix,
-        selectedIndexes, currentStep, currentStepData, myNickname, myId,
-        toast, showRules, errorMsg,
-        statusLabel, myHand, isPlayer, isSpectator, amIAlive, amHost,
-        isMyTurn, canPlay, canCallLiar, canStart, overlayBg,
-        tryCreate, tryJoin, trySpectate, sendAction, toggleSelect, playCards,
-        kickPlayer, copyInvite,
+        } catch(_) {}
       };
     }
-  }).mount('#app');
-</script>
 
+    function tryCreate() {
+      if (!nickname.value.trim()) { errorMsg.value = t('err_nick'); return; }
+      const proto = window.location.protocol==='https:'?'wss':'ws';
+      doConnect(proto+'://'+window.location.host+'/ws?action=create&name='+encodeURIComponent(nickname.value.trim()), nickname.value.trim());
+    }
+
+    function tryJoin() {
+      if (!nickname.value.trim()) { errorMsg.value = t('err_nick'); return; }
+      if (!roomCodeInput.value.trim()) { errorMsg.value = t('err_code'); return; }
+      const proto = window.location.protocol==='https:'?'wss':'ws';
+      doConnect(proto+'://'+window.location.host+'/ws?action=join&code='+encodeURIComponent(roomCodeInput.value.trim().toUpperCase())+'&name='+encodeURIComponent(nickname.value.trim()), nickname.value.trim());
+    }
+
+    function trySpectate() {
+      if (!nickname.value.trim()) nickname.value = 'Spectator'+Math.floor(Math.random()*100);
+      if (!roomCodeInput.value.trim()) { errorMsg.value = t('err_code')||'Please enter a room code'; return; }
+      const proto = window.location.protocol==='https:'?'wss':'ws';
+      doConnect(proto+'://'+window.location.host+'/ws?action=spectate&code='+encodeURIComponent(roomCodeInput.value.trim().toUpperCase())+'&name='+encodeURIComponent(nickname.value.trim()), nickname.value.trim());
+    }
+
+    // ── Actions ──
+    const sendAction = (action, payload) => {
+      if (ws.value && ws.value.readyState===WebSocket.OPEN)
+        ws.value.send(JSON.stringify({action, payload}));
+    };
+
+    const toggleSelect = (idx) => {
+      if (!isMyTurn.value) return;
+      const pos = selectedIndexes.value.indexOf(idx);
+      pos>-1 ? selectedIndexes.value.splice(pos,1) : selectedIndexes.value.length<3 && selectedIndexes.value.push(idx);
+    };
+
+    const playCards = () => {
+      sendAction('play_cards', { cards:selectedIndexes.value.map(i=>myHand.value[i]) });
+      selectedIndexes.value = [];
+    };
+
+    const kickPlayer = (targetId) => sendAction('remove_player', { target_id:targetId });
+
+    const copyInvite = () => {
+      const link = window.location.origin+'?room='+state.value.room_code;
+      navigator.clipboard.writeText(link).then(()=>showToast('✅ '+t('copied'))).catch(()=>showToast('📋 '+link));
+    };
+
+    // ── Persist lang ──
+    watchEffect(() => { localStorage.setItem('liarsdeck-lang', lang.value); });
+
+    // ── URL param auto-fill ──
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('room')) { roomCodeInput.value = params.get('room').toUpperCase(); tab.value = 'join'; }
+
+    return {
+      nickname, roomCodeInput, tab, connected, state, currentUnix,
+      selectedIndexes, currentStep, currentStepData, myNickname, myId,
+      toast, showRules, errorMsg, lang, t,
+      statusLabel, myHand, isPlayer, isSpectator, amHost,
+      isMyTurn, canPlay, canCallLiar, canStart, overlayBg,
+      tryCreate, tryJoin, trySpectate, sendAction, toggleSelect, playCards,
+      kickPlayer, copyInvite,
+    };
+  }
+}).mount('#app');
+</script>
 </body>
 </html>
