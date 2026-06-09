@@ -702,24 +702,8 @@ func (c *Client) ReadPump() {
 
 						// check for winner: player emptied their hand
 						if len(p.Hand) == 0 {
-							// count alive non-spectator players
-							aliveCount := 0
-							for _, pp := range g.State.Players {
-								if !pp.IsSpectator && pp.IsAlive {
-									aliveCount++
-								}
-							}
-							if aliveCount == 2 {
-								// 2-player: opponent must call liar before winning
-								g.Log(fmt.Sprintf("%s 打完了所有手牌！对手可以质疑 / %s emptied their hand! Opponent may call liar", p.Nickname, p.Nickname))
-							} else {
-								g.State.Status = "game_over"
-								g.State.Winner = p.Nickname
-								g.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / %s emptied their hand and wins!", p.Nickname, p.Nickname))
-								g.mu.Unlock()
-								c.Room.Broadcast()
-								continue
-							}
+							// opponent must call liar before winning
+							g.Log(fmt.Sprintf("%s 打完了所有手牌！下家必须质疑 / %s emptied their hand! Next player must call liar", p.Nickname, p.Nickname))
 						}
 
 						g.NextTurn()
@@ -775,25 +759,8 @@ func (r *Room) Watchdog() {
 					r.Game.State.LastPlayedCnt = 1
 					r.Game.State.LastPlayer = currIdx
 					r.Game.Log(fmt.Sprintf("%s 强制打出了 1 张牌 / %s auto-played 1 card", p.Nickname, p.Nickname))
-
 					if len(p.Hand) == 0 {
-						// check 2-player case
-						aliveCount := 0
-						for _, pp := range r.Game.State.Players {
-							if !pp.IsSpectator && pp.IsAlive {
-								aliveCount++
-							}
-						}
-						if aliveCount == 2 {
-							r.Game.Log(fmt.Sprintf("%s 打完了所有手牌！对手可以质疑 / %s emptied their hand! Opponent may call liar", p.Nickname, p.Nickname))
-						} else {
-							r.Game.State.Status = "game_over"
-							r.Game.State.Winner = p.Nickname
-							r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / 🏆 %s emptied their hand and wins!", p.Nickname, p.Nickname))
-							r.Game.mu.Unlock()
-							r.Broadcast()
-							continue
-						}
+						r.Game.Log(fmt.Sprintf("%s 打完了所有手牌！下家必须质疑 / %s emptied their hand! Next player must call liar", p.Nickname, p.Nickname))
 					}
 					r.Game.NextTurn()
 				}
