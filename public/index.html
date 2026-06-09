@@ -239,6 +239,7 @@
       align-items: center;
       justify-content: center;
     }
+    .t-card.wild { border-color: #9e9e9e; box-shadow: 0 0 0 2px rgba(158,158,158,.25); }
     .table-area .t-info { font-size: .85rem; color: #86868b; margin-top: 8px; }
     .table-area .winner { font-size: 1.2rem; font-weight: 700; color: #0071e3; margin-top: 6px; }
 
@@ -261,8 +262,11 @@
       user-select: none;
       transition: all .2s;
     }
+    .h-card { border-color: #d2d2d7; }
     .h-card:hover { border-color: #0071e3; transform: translateY(-3px); }
     .h-card.selected { border-color: #0071e3; transform: translateY(-8px); box-shadow: 0 4px 12px rgba(0,113,227,.2); }
+    .h-card.wild { border-color: #9e9e9e; box-shadow: 0 0 0 2px rgba(158,158,158,.25); }
+    .h-card.wild.selected { border-color: #0071e3; box-shadow: 0 0 0 2px rgba(158,158,158,.25), 0 4px 12px rgba(0,113,227,.2); }
 
     /* ── Actions ── */
     .act-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -304,6 +308,7 @@
       font-size:26px; font-weight:700;
       display:flex; align-items:center; justify-content:center;
     }
+    .overlay .rcard.wild { border-color:#9e9e9e; box-shadow:0 0 0 2px rgba(158,158,158,.25); }
 
     /* ── Modal ── */
     .modal-bg {
@@ -501,7 +506,7 @@
     <!-- Table -->
     <div class="table-area" v-if="state.status==='playing'">
       <div class="t-label">{{ t('true_card') }}</div>
-      <div class="t-card">{{ state.table_card }}</div>
+      <div class="t-card" :class="{wild: state.table_card==='2'}">{{ state.table_card }}</div>
       <div class="t-info" v-if="state.last_played_cnt>0">
         {{ t('last_play') }} {{ state.last_played_cnt }} {{ t('cards_face') }}
       </div>
@@ -526,7 +531,7 @@
       <h3>{{ t('my_hand') }}</h3>
       <div class="hand-cards">
         <div v-for="(c,i) in myHand" :key="i" class="h-card"
-          :class="{selected:selectedIndexes.includes(i)}"
+          :class="{selected:selectedIndexes.includes(i), wild: c==='2'}"
           @click="toggleSelect(i)">{{ c }}</div>
       </div>
     </div>
@@ -556,7 +561,7 @@
     <template v-if="currentStep==='reveal'">
       <h2 style="margin-bottom:6px;">{{ currentStepData.accused }}'s {{ t('cards_label') }}</h2>
       <div class="rcards">
-        <div v-for="(c,i) in currentStepData.cards" :key="i" class="rcard">{{ c }}</div>
+        <div v-for="(c,i) in currentStepData.cards" :key="i" class="rcard" :class="{wild: c==='2'}">{{ c }}</div>
       </div>
     </template>
     <template v-if="currentStep==='shot'">

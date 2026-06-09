@@ -67,6 +67,7 @@ type Client struct {
 	Room     *Room
 	Conn     *websocket.Conn
 	Send     chan []byte
+	once     sync.Once
 }
 
 type WSMessage struct {
@@ -468,74 +469,74 @@ func main() {
 }
 
 func (r *Room) RemoveClient(client *Client) {
-	r.mu.Lock()
-	delete(r.Clients, client)
-	r.mu.Unlock()
+	client.once.Do(func() {
+		r.mu.Lock()
+		delete(r.Clients, client)
+		r.mu.Unlock()
 
-	r.Game.mu.Lock()
-	removedIdx := -1
-	for i, p := range r.Game.State.Players {
-		if p.ID == client.ID {
-			removedIdx = i
-			p.IsAlive = false
-			break
+		r.Game.mu.Lock()
+		removedIdx := -1
+		for i, p := range r.Game.State.Players {
+			if p.ID == client.ID {
+				removedIdx = i
+				p.IsAlive = false
+				break
+			}
 		}
-	}
 
-	if removedIdx != -1 {
-		p := r.Game.State.Players[removedIdx]
-		p.Client = nil
-		r.Game.Log(fmt.Sprintf("👋 %s 离开了房间", p.Nickname))
+		if removedIdx != -1 {
+			p := r.Game.State.Players[removedIdx]
+			p.Client = nil
+			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间", p.Nickname))
 
-		if r.Game.State.Status == "waiting" {
-			wasHost := p.IsHost
-			r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
-			// transfer host if host left
-			if wasHost && len(r.Game.State.Players) > 0 {
-				for _, pp := range r.Game.State.Players {
-					if !pp.IsSpectator {
-						pp.IsHost = true
-						r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
-						break
+			if r.Game.State.Status == "waiting" {
+				wasHost := p.IsHost
+				r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
+				if wasHost && len(r.Game.State.Players) > 0 {
+					for _, pp := range r.Game.State.Players {
+						if !pp.IsSpectator {
+							pp.IsHost = true
+							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+							break
+						}
 					}
 				}
-			}
-		} else {
-			// check if host left during game
-			wasHost := p.IsHost
-			if wasHost {
-				for _, pp := range r.Game.State.Players {
-					if pp.Client != nil && !pp.IsSpectator && pp != p {
-						pp.IsHost = true
-						r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
-						break
+			} else {
+				wasHost := p.IsHost
+				if wasHost {
+					for _, pp := range r.Game.State.Players {
+						if pp.Client != nil && !pp.IsSpectator && pp != p {
+							pp.IsHost = true
+							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+							break
+						}
 					}
 				}
-			}
 
-			aliveCount := 0
-			for _, pp := range r.Game.State.Players {
-				if !pp.IsSpectator && pp.IsAlive {
-					aliveCount++
-				}
-			}
-			if aliveCount <= 1 {
-				r.Game.State.Status = "game_over"
+				aliveCount := 0
 				for _, pp := range r.Game.State.Players {
 					if !pp.IsSpectator && pp.IsAlive {
-						r.Game.State.Winner = pp.Nickname
+						aliveCount++
 					}
 				}
-				r.Game.Log("游戏结束！其他玩家已离开")
-			} else if r.Game.State.CurrentTurn == removedIdx {
-				r.Game.NextTurn()
+				if aliveCount <= 1 {
+					r.Game.State.Status = "game_over"
+					for _, pp := range r.Game.State.Players {
+						if !pp.IsSpectator && pp.IsAlive {
+							r.Game.State.Winner = pp.Nickname
+						}
+					}
+					r.Game.Log("游戏结束！其他玩家已离开")
+				} else if r.Game.State.CurrentTurn == removedIdx {
+					r.Game.NextTurn()
+				}
 			}
 		}
-	}
-	r.Game.mu.Unlock()
-	close(client.Send)
-	client.Conn.Close()
-	r.Broadcast()
+		r.Game.mu.Unlock()
+		close(client.Send)
+		client.Conn.Close()
+		r.Broadcast()
+	})
 }
 
 func (c *Client) ReadPump() {
@@ -559,7 +560,6 @@ func (c *Client) ReadPump() {
 			}
 			json.Unmarshal(msg.Payload, &req)
 
-			// find the caller and verify they're host
 			var callerHost bool
 			for _, p := range g.State.Players {
 				if p.ID == c.ID && p.IsHost {
@@ -568,23 +568,16 @@ func (c *Client) ReadPump() {
 				}
 			}
 			if callerHost {
-				for i, p := range g.State.Players {
+				for _, p := range g.State.Players {
 					if p.ID == req.TargetID && p.Client != nil {
 						g.Log(fmt.Sprintf("👢 %s 被房主移出房间", p.Nickname))
-						// disconnect the target client
-						targetClient := p.Client
-						p.Client = nil
-
-						// broadcast removal first
-						g.mu.Unlock()
-						g.State.Players = append(g.State.Players[:i], g.State.Players[i+1:]...)
-						targetClient.Room.RemoveClient(targetClient)
-						g.mu.Lock()
+						p.Client.Conn.Close()
 						break
 					}
 				}
 			}
 			g.mu.Unlock()
+			c.Room.Broadcast()
 			continue
 		}
 
