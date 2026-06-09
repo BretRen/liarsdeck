@@ -506,7 +506,7 @@ func (r *Room) RemoveClient(client *Client) {
 			p.Client = nil
 			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间 / 👋 %s left the room", p.Nickname, p.Nickname))
 
-			if r.Game.State.Status == "waiting" {
+			if r.Game.State.Status == "waiting" || p.IsSpectator {
 				wasHost := p.IsHost
 				r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
 				if wasHost && len(r.Game.State.Players) > 0 {
