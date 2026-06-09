@@ -94,6 +94,12 @@ func randomCode(n int) string {
 	return string(b)
 }
 
+func newRevolver() []string {
+	r := []string{"Blank", "Blank", "Blank", "Blank", "Blank", "Fatal"}
+	rand.Shuffle(len(r), func(i, j int) { r[i], r[j] = r[j], r[i] })
+	return r
+}
+
 func NewGame(code string) *Game {
 	return &Game{
 		State: &GameState{
@@ -411,7 +417,7 @@ func main() {
 			room.Game.mu.Lock()
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
-				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: true, IsSpectator: false, Client: client,
+				Revolver: newRevolver(), Bullets: 6, IsAlive: true, IsHost: true, IsSpectator: false, Client: client,
 			})
 			room.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s / 🏠 %s created room %s", nickname, code, nickname, code))
 			room.Game.mu.Unlock()
@@ -450,7 +456,7 @@ func main() {
 		if !isSpectator && room.Game.State.Status == "waiting" && playerCount < 4 {
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
-				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
+				Revolver: newRevolver(), Bullets: 6, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
 			})
 			room.Game.Log(nickname + " 加入了房间 / " + nickname + " joined the room")
 		} else if isSpectator {
