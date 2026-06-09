@@ -646,6 +646,7 @@ const i18n = {
     err_nick: '请输入昵称',
     err_code: '请输入房间码',
     copied: '已复制邀请链接',
+    reconnecting: '重新连接中...',
   },
   en: {
     subtitle: 'A psychological bluffing card game',
@@ -714,6 +715,7 @@ const i18n = {
     err_nick: 'Please enter a nickname',
     err_code: 'Please enter a room code',
     copied: 'Invite link copied',
+    reconnecting: 'Reconnecting...',
   }
 };
 
@@ -733,6 +735,8 @@ createApp({
     const currentStep = ref('');
     const currentStepData = ref({});
     const myNickname = ref('');
+    const myRoomCode = ref('');
+    const myPlayerToken = ref('');
     const toast = ref('');
     const showRules = ref(false);
     const errorMsg = ref('');
@@ -805,28 +809,68 @@ createApp({
     function doConnect(url, name) {
       errorMsg.value = '';
       myNickname.value = name;
+      // extract room code from URL for reconnect
+      const codeMatch = url.match(/[&?]code=([^&]+)/);
+      if (codeMatch) myRoomCode.value = decodeURIComponent(codeMatch[1]);
       ws.value = new WebSocket(url);
       ws.value.onopen = () => { connected.value = true; };
       ws.value.onclose = () => {
-        if (connected.value) { showToast(t('disconnected')); setTimeout(()=>{connected.value=false;},1500); }
-      };
-      ws.value.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.error) { errorMsg.value = msg.error; return; }
-          if (msg.type === 'game_state') {
-            if (currentStep.value !== '') {
-              pendingState.value = msg.data;
-            } else {
-              state.value = msg.data;
-              if (!isMyTurn.value) selectedIndexes.value = [];
-            }
-          } else if (['liar_call','reveal','shot'].includes(msg.type)) {
-            eventQueue.value.push({ type:msg.type, data:msg.data });
-            processQueue();
+        if (connected.value) {
+          showToast(t('disconnected'));
+          // try to reconnect
+          if (myPlayerToken.value && myRoomCode.value) {
+            setTimeout(tryReconnect, 1500);
+          } else {
+            setTimeout(()=>{connected.value=false;}, 1500);
           }
-        } catch(_) {}
+        }
       };
+      ws.value.onmessage = handleMessage;
+    }
+
+    function tryReconnect() {
+      if (!myRoomCode.value || !myPlayerToken.value || !myNickname.value) return;
+      const proto = window.location.protocol==='https:'?'wss':'ws';
+      const url = proto+'://'+window.location.host+'/ws?action=reconnect&code='+encodeURIComponent(myRoomCode.value)+'&token='+encodeURIComponent(myPlayerToken.value)+'&name='+encodeURIComponent(myNickname.value);
+      const newWs = new WebSocket(url);
+      newWs.onopen = () => {
+        showToast('🔗 '+t('reconnecting'));
+        ws.value = newWs;
+        connected.value = true;
+        newWs.onclose = (e) => {
+          if (connected.value) {
+            showToast(t('disconnected'));
+            setTimeout(tryReconnect, 3000);
+          }
+        };
+        newWs.onmessage = handleMessage;
+      };
+      newWs.onclose = () => {
+        setTimeout(tryReconnect, 3000);
+      };
+    }
+
+    // shared message handler
+    function handleMessage(e) {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.error) { errorMsg.value = msg.error; return; }
+        if (msg.type === 'game_state') {
+          if (msg.data.players && myNickname.value) {
+            const me = msg.data.players.find(p => p.nickname === myNickname.value);
+            if (me && me.id) myPlayerToken.value = me.id;
+          }
+          if (currentStep.value !== '') {
+            pendingState.value = msg.data;
+          } else {
+            state.value = msg.data;
+            if (!isMyTurn.value) selectedIndexes.value = [];
+          }
+        } else if (['liar_call','reveal','shot'].includes(msg.type)) {
+          eventQueue.value.push({ type:msg.type, data:msg.data });
+          processQueue();
+        }
+      } catch(_) {}
     }
 
     function tryCreate() {

@@ -388,6 +388,7 @@ func main() {
 		action := c.QueryParam("action")
 		code := c.QueryParam("code")
 		nickname := c.QueryParam("name")
+		token := c.QueryParam("token")
 
 		conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 		if err != nil {
@@ -445,6 +446,25 @@ func main() {
 		room.Game.mu.Lock()
 		isSpectator := action == "spectate"
 
+		// ---- Reconnect ----
+		if action == "reconnect" {
+			for _, p := range room.Game.State.Players {
+				if p.ID == token && p.Client == nil {
+					p.Client = client
+					room.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+					room.Game.mu.Unlock()
+					go client.WritePump()
+					go client.ReadPump()
+					room.Broadcast()
+					return nil
+				}
+			}
+			room.Game.mu.Unlock()
+			conn.WriteJSON(map[string]string{"error": "无法重连 / Reconnect failed"})
+			conn.Close()
+			return nil
+		}
+
 		// count non-spectator players
 		playerCount := 0
 		for _, pp := range room.Game.State.Players {
@@ -496,7 +516,6 @@ func (r *Room) RemoveClient(client *Client) {
 		for i, p := range r.Game.State.Players {
 			if p.ID == client.ID {
 				removedIdx = i
-				p.IsAlive = false
 				break
 			}
 		}
@@ -504,9 +523,9 @@ func (r *Room) RemoveClient(client *Client) {
 		if removedIdx != -1 {
 			p := r.Game.State.Players[removedIdx]
 			p.Client = nil
-			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间 / 👋 %s left the room", p.Nickname, p.Nickname))
 
 			if r.Game.State.Status == "waiting" || p.IsSpectator {
+				r.Game.Log(fmt.Sprintf("👋 %s 离开了房间 / 👋 %s left the room", p.Nickname, p.Nickname))
 				wasHost := p.IsHost
 				r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
 				if wasHost && len(r.Game.State.Players) > 0 {
@@ -519,34 +538,9 @@ func (r *Room) RemoveClient(client *Client) {
 					}
 				}
 			} else {
-				wasHost := p.IsHost
-				if wasHost {
-					for _, pp := range r.Game.State.Players {
-						if pp.Client != nil && !pp.IsSpectator && pp != p {
-							pp.IsHost = true
-							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主 / 👑 %s is the new host", pp.Nickname, pp.Nickname))
-							break
-						}
-					}
-				}
-
-				aliveCount := 0
-				for _, pp := range r.Game.State.Players {
-					if !pp.IsSpectator && pp.IsAlive {
-						aliveCount++
-					}
-				}
-				if aliveCount <= 1 {
-					r.Game.State.Status = "game_over"
-					for _, pp := range r.Game.State.Players {
-						if !pp.IsSpectator && pp.IsAlive {
-							r.Game.State.Winner = pp.Nickname
-						}
-					}
-					r.Game.Log("游戏结束！其他玩家已离开 / Game over! Other players left")
-				} else if r.Game.State.CurrentTurn == removedIdx {
-					r.Game.NextTurn()
-				}
+				// Playing: keep player in seat for reconnection
+				r.Game.Log(fmt.Sprintf("📴 %s 断线了 / 📴 %s disconnected", p.Nickname, p.Nickname))
+				// don't set IsAlive=false, don't remove from slice
 			}
 		}
 		r.Game.mu.Unlock()
