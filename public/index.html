@@ -1,323 +1,966 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta charset="UTF-8">
-    <title>说谎者 (Liar's Deck) - Web版</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3.5.35/dist/vue.global.min.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>说谎者 (Liar's Deck)</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.35/dist/vue.global.prod.js">
+  </script>
+  <style>
+    /* ── Reset & Base ── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+      color: #e8e8f0;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    input {
+      font-family: inherit;
+      border: 2px solid #3a3a6a;
+      border-radius: 10px;
+      background: #1e1e44;
+      color: #e8e8f0;
+      padding: 10px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border .2s;
+    }
+    input:focus {
+      border-color: #6c63ff;
+    }
+    input::placeholder {
+      color: #6a6a8a;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a3a6a;
+      border-radius: 3px;
+    }
 
-        .card {
-            display: inline-block;
-            width: 60px;
-            height: 90px;
-            border-radius: 8px;
-            background: white;
-            color: black;
-            font-size: 24px;
-            font-weight: bold;
-            line-height: 90px;
-            text-align: center;
-            margin: 5px;
-            cursor: pointer;
-            user-select: none;
-            border: 3px solid transparent;
-        }
+    /* ── App Container ── */
+    #app {
+      max-width: 820px;
+      margin: 0 auto;
+    }
 
-        .card.selected {
-            border-color: #e74c3c;
-            transform: translateY(-10px);
-        }
+    /* ── Lobby (Pre-join) ── */
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+      text-align: center;
+    }
+    .lobby h1 {
+      font-size: 2.6rem;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lobby .subtitle {
+      color: #8a8aaa;
+      font-size: .95rem;
+      margin-bottom: 32px;
+    }
+    .lobby .card {
+      background: rgba(255, 255, 255, .06);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 18px;
+      padding: 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .lobby .card .field {
+      margin-bottom: 14px;
+    }
+    .lobby .card .field label {
+      display: block;
+      text-align: left;
+      font-size: .8rem;
+      color: #8a8aaa;
+      margin-bottom: 4px;
+    }
+    .lobby .card .field input {
+      width: 100%;
+    }
+    .lobby .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .lobby .actions button {
+      flex: 1;
+      min-width: 100px;
+      padding: 12px 0;
+      font-size: 15px;
+    }
+    .btn-primary {
+      background: #6c63ff;
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #5a52e0;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #3a3a6a;
+      color: #c8c8e0;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #4a4a7a;
+    }
+    .btn-success {
+      background: #2ecc71;
+      color: #fff;
+    }
+    .btn-success:hover:not(:disabled) {
+      background: #27ae60;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: #c0392b;
+    }
+    .btn-warn {
+      background: #f39c12;
+      color: #fff;
+    }
+    .btn-warn:hover:not(:disabled) {
+      background: #e67e22;
+    }
+    .btn-rules {
+      background: transparent;
+      color: #8a8aaa;
+      border: 1px solid #3a3a6a;
+      padding: 10px 18px;
+      font-size: 13px;
+      margin-top: 14px;
+    }
+    .btn-rules:hover {
+      border-color: #6c63ff;
+      color: #c8c8e0;
+    }
+    .lobby .error {
+      color: #e74c3c;
+      font-size: .85rem;
+      margin-top: 10px;
+    }
 
-        .player-box {
-            border: 1px solid #7f8c8d;
-            padding: 10px;
-            margin: 10px;
-            border-radius: 8px;
-            display: inline-block;
-            min-width: 150px;
-        }
+    /* ── Game Layout ── */
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, .04);
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .game-header .room-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .game-header .room-code {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      color: #f7971e;
+    }
+    .game-header .invite-btn {
+      background: #2a2a5a;
+      color: #8a8aaa;
+      border: 1px solid #3a3a6a;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: .8rem;
+    }
+    .game-header .invite-btn:hover {
+      background: #3a3a6a;
+      color: #e8e8f0;
+    }
+    .game-header .status-badge {
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .status-badge.waiting {
+      background: #3a3a6a;
+      color: #8a8aaa;
+    }
+    .status-badge.playing {
+      background: rgba(46, 204, 113, .15);
+      color: #2ecc71;
+    }
+    .status-badge.over {
+      background: rgba(243, 156, 18, .15);
+      color: #f39c12;
+    }
+    .game-header .timer {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: #e74c3c;
+      font-size: .95rem;
+    }
 
-        .active-turn {
-            border-color: #2ecc71;
-            box-shadow: 0 0 15px #2ecc71;
-        }
+    /* ── Players ── */
+    .players-area {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .player-box {
+      flex: 1;
+      min-width: 110px;
+      background: rgba(255, 255, 255, .04);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 10px 12px;
+      text-align: center;
+      transition: all .3s;
+    }
+    .player-box.active-turn {
+      border-color: #6c63ff;
+      box-shadow: 0 0 20px rgba(108, 99, 255, .3);
+    }
+    .player-box.dead {
+      opacity: .4;
+    }
+    .player-box.spectator-box {
+      border-color: #3a3a6a;
+      border-style: dashed;
+    }
+    .player-box .p-name {
+      font-weight: 600;
+      font-size: .9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .player-box .p-name .host-badge {
+      font-size: .7rem;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      color: #1a1a3e;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-weight: 700;
+    }
+    .player-box .p-name .spec-badge {
+      font-size: .65rem;
+      background: #3a3a6a;
+      color: #8a8aaa;
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+    .player-box .p-stats {
+      font-size: .75rem;
+      color: #8a8aaa;
+      margin-top: 2px;
+    }
+    .player-box .p-kick {
+      margin-top: 6px;
+      font-size: .7rem;
+      padding: 2px 10px;
+      border-radius: 4px;
+      background: rgba(231, 76, 60, .15);
+      color: #e74c3c;
+    }
+    .player-box .p-kick:hover {
+      background: rgba(231, 76, 60, .3);
+    }
 
-        .dead {
-            opacity: 0.5;
-            filter: grayscale(100%);
-        }
+    /* ── Table ── */
+    .table-area {
+      background: rgba(0, 0, 0, .3);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255, 255, 255, .06);
+    }
+    .table-area .label {
+      font-size: .8rem;
+      color: #8a8aaa;
+      margin-bottom: 8px;
+    }
+    .table-card {
+      display: inline-flex;
+      width: 56px;
+      height: 84px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
+      color: #1a1a3e;
+      font-size: 26px;
+      font-weight: 800;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
+    }
+    .table-area .last-play {
+      font-size: .85rem;
+      color: #c8c8e0;
+      margin-top: 8px;
+    }
+    .table-area .winner-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f7971e;
+      margin-top: 6px;
+    }
 
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            cursor: pointer;
-            border-radius: 5px;
-            border: none;
-            font-weight: bold;
-        }
+    /* ── Hand ── */
+    .hand-area {
+      margin-bottom: 14px;
+    }
+    .hand-area h3 {
+      font-size: .85rem;
+      color: #8a8aaa;
+      margin-bottom: 8px;
+    }
+    .hand-cards {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .hand-card {
+      width: 56px;
+      height: 84px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
+      color: #1a1a3e;
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      border: 3px solid transparent;
+      transition: all .2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+    }
+    .hand-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+    }
+    .hand-card.selected {
+      border-color: #6c63ff;
+      transform: translateY(-10px);
+      box-shadow: 0 8px 24px rgba(108, 99, 255, .35);
+    }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+    /* ── Actions ── */
+    .actions-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .actions-row button {
+      padding: 10px 22px;
+      font-size: 14px;
+    }
 
-        .btn-play {
-            background: #3498db;
-            color: white;
-        }
+    /* ── Logs ── */
+    .logs-area {
+      background: rgba(0, 0, 0, .35);
+      border-radius: 10px;
+      padding: 10px 14px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: .8rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+      line-height: 1.6;
+      color: #8a8aaa;
+    }
 
-        .btn-liar {
-            background: #e74c3c;
-            color: white;
-        }
+    /* ── Event Overlay ── */
+    .event-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: background .3s;
+      padding: 20px;
+    }
+    .event-overlay h1 {
+      font-size: 4rem;
+      margin-bottom: 10px;
+    }
+    .event-overlay h2 {
+      font-size: 1.6rem;
+      color: #e8e8f0;
+    }
+    .event-overlay .reveal-cards {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      justify-content: center;
+    }
+    .event-overlay .reveal-cards .rcard {
+      width: 70px;
+      height: 100px;
+      background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
+      color: #1a1a3e;
+      border-radius: 8px;
+      font-size: 30px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
+    }
 
-        .logs {
-            background: #1a252f;
-            padding: 10px;
-            height: 150px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 14px;
-        }
+    /* ── Spectator Notice ── */
+    .spectator-notice {
+      background: rgba(108, 99, 255, .1);
+      border: 1px dashed #6c63ff;
+      border-radius: 10px;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: .85rem;
+      color: #8a8aaa;
+      margin-bottom: 14px;
+    }
 
-        .table-area {
-            background: #34495e;
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
+    /* ── Rules Modal ── */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, .7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #1e1e44;
+      border: 1px solid #3a3a6a;
+      border-radius: 18px;
+      padding: 28px 32px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-box h2 {
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      color: #f7971e;
+    }
+    .modal-box h3 {
+      font-size: 1rem;
+      color: #c8c8e0;
+      margin: 14px 0 6px;
+    }
+    .modal-box p,
+    .modal-box li {
+      font-size: .85rem;
+      color: #8a8aaa;
+      line-height: 1.6;
+    }
+    .modal-box ul {
+      padding-left: 18px;
+    }
+    .modal-box .close-modal {
+      margin-top: 18px;
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+    }
 
-        .pre-join-room {
-            text-align: center;
-        }
-    </style>
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e1e44;
+      border: 1px solid #3a3a6a;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: .85rem;
+      z-index: 1001;
+      animation: fadeInUp .3s;
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      body {
+        padding: 10px;
+      }
+      .lobby h1 {
+        font-size: 2rem;
+      }
+      .lobby .card {
+        padding: 20px;
+      }
+      .player-box {
+        min-width: 80px;
+        padding: 8px;
+      }
+      .player-box .p-name {
+        font-size: .8rem;
+      }
+      .game-header {
+        padding: 10px 12px;
+      }
+      .event-overlay h1 {
+        font-size: 2.6rem;
+      }
+      .event-overlay h2 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
 </head>
-
 <body>
-    <div id="app">
-        <div v-if="!connected" class="pre-join-room">
-            <h2>加入房间</h2>
-            <input v-model="roomID" placeholder="房间号" />
-            <input v-model="myID" placeholder="你的昵称" />
-            <button @click="connect">连接服务器</button>
+
+  <div id="app">
+    <!-- ── Lobby ── -->
+    <div v-if="!connected" class="lobby">
+      <h1>🃏 说谎者</h1>
+      <p class="subtitle">Liar's Deck — 心理博弈卡牌游戏</p>
+      <div class="card">
+        <div class="field">
+          <label>你的昵称</label>
+          <input v-model="nickname" placeholder="输入昵称..." @keyup.enter="tryCreate" maxlength="12" />
         </div>
-
-        <div v-else>
-            <h2>房间: {{ roomID }} | 状态: {{ state.status }}
-                <span v-if="state.status === 'playing'" style="color:#e74c3c">倒计时: {{ Math.max(0, state.deadline -
-                    currentUnix) }}s</span>
-            </h2>
-
-            <div v-if="state.status === 'waiting'">
-                <button @click="sendAction('start', {})">开始游戏 (需至少2人)</button>
-            </div>
-
-            <div>
-                <div v-for="(p, index) in state.players" :key="p.id" class="player-box"
-                    :class="{'active-turn': state.current_turn === index, 'dead': !p.is_alive}">
-                    <h3>{{ p.nickname }} {{ p.nickname === String(myID) ? '(我)' : '' }}</h3>
-                    <p v-if="p.is_alive">剩余子弹: {{ p.bullets }}/6</p>
-                    <p v-if="p.is_alive">手牌数: {{ p.hand ? p.hand.length : 0 }}</p>
-                    <p v-else>💀 已阵亡</p>
-                </div>
-            </div>
-
-            <div class="table-area" v-if="state.status === 'playing'">
-                <h3>本轮真牌</h3>
-                <div class="card">{{ state.table_card }}</div>
-                <h4 v-if="state.last_played_cnt > 0">
-                    上次出牌: 上家打出了背面向上的 {{ state.last_played_cnt }} 张牌
-                </h4>
-            </div>
-
-            <div v-if="amIAlive && state.status === 'playing'">
-                <hr>
-                <h3>我的手牌 (点击选择)</h3>
-                <div>
-                    <div v-for="(c, i) in myHand" :key="i" class="card" :class="{selected: selectedIndexes.includes(i)}"
-                        @click="toggleSelect(i)">
-                        {{ c }}
-                    </div>
-                </div>
-
-                <div style="margin-top: 15px;">
-                    <button class="btn-play" :disabled="!canPlay" @click="playCards">
-                        发牌 (选1-3张)
-                    </button>
-                    <button class="btn-liar" :disabled="!canCallLiar" @click="sendAction('call_liar', {})">
-                        说谎！
-                    </button>
-                </div>
-            </div>
-
-            <div v-if="currentStep !== ''"
-                style="position:fixed; top:0; left:0; right:0; bottom:0; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: background 0.3s;"
-                :style="{ background: currentStep === 'liar_call' ? 'rgba(200,0,0,0.85)' : 'rgba(0,0,0,0.8)' }">
-
-                <template v-if="currentStep === 'liar_call'">
-                    <h1 style="font-size:80px; color:white; text-shadow: 0 0 30px red;">🚨 说谎！</h1>
-                    <p style="font-size:24px; color:#ffcccc;">{{ currentStepData.caller }} 质疑 {{ currentStepData.accused
-                        }}</p>
-                </template>
-
-                <template v-if="currentStep === 'reveal'">
-                    <h2 style="color:white;">{{ currentStepData.accused }} 的底牌</h2>
-                    <div>
-                        <div v-for="c in currentStepData.cards" class="card"
-                            style="font-size:36px; width:80px; height:120px; line-height:120px;">
-                            {{ c }}
-                        </div>
-                    </div>
-                </template>
-
-                <template v-if="currentStep === 'shot'">
-                    <h1 style="font-size:60px;">{{ currentStepData.fatal ? '💥 砰！' : '💨 咔哒' }}</h1>
-                    <h2 style="color:white;">{{ currentStepData.target }}</h2>
-                </template>
-            </div>
-
-
-            <div v-if="state.status === 'game_over'">
-                <h1>🏆 游戏结束！获胜者是: {{ state.winner }}</h1>
-                <button @click="sendAction('reset', {})"
-                    style="background:#2ecc71; color:white; font-size:18px; padding:12px 30px; margin-top:15px;">
-                    🔄 再来一局
-                </button>
-            </div>
-
-            <h3>对战日志</h3>
-            <div class="logs">
-                <div v-for="log in state.logs">{{ log }}</div>
-            </div>
+        <div class="field" v-if="tab === 'join' || tab === 'spectate'">
+          <label>房间码</label>
+          <input v-model="roomCodeInput" placeholder="如：ABC123" @keyup.enter="tab === 'join' ? tryJoin() : trySpectate()"
+          maxlength="6" style="text-transform:uppercase;letter-spacing:3px;font-weight:700;" />
         </div>
+        <div class="actions">
+          <button class="btn-primary" @click="tryCreate">创建房间</button>
+          <button class="btn-secondary" @click="tab = 'join'">加入房间</button>
+          <button class="btn-secondary" @click="tab = 'spectate'">观战</button>
+        </div>
+        <div v-if="tab !== 'create'" style="margin-top:6px;">
+          <button class="btn-secondary" style="width:100%;padding:8px;font-size:13px;" @click="tab = 'create'">
+            ← 返回
+          </button>
+        </div>
+        <div class="error" v-if="errorMsg">{{ errorMsg }}</div>
+      </div>
+      <button class="btn-rules" @click="showRules = true">📖 游戏规则</button>
     </div>
 
+    <!-- ── Rules Modal ── -->
+    <div class="modal-overlay" v-if="showRules" @click.self="showRules = false">
+      <div class="modal-box">
+        <h2>📖 游戏规则</h2>
+        <h3>🎯 目标</h3>
+        <p>成为最后一个存活者，或者先打完所有手牌。</p>
+        <h3>🃏 牌组</h3>
+        <p>24张牌：K（王）、Q（后）、A（尖）、2（万能牌），每种6张。</p>
+        <h3>🔁 回合流程</h3>
+        <ul>
+          <li>每轮翻出一张 <strong>真牌</strong>，每人发5张手牌</li>
+          <li>轮到你的回合，选 1-3 张牌 <strong>背面向下</strong> 打出，并声称它们是真牌</li>
+          <li><strong>你可以说谎</strong>——打出的牌可以不是真牌！</li>
+          <li>2（万能牌）可以当作任何牌</li>
+        </ul>
+        <h3>🚨 质疑（Call Liar）</h3>
+        <ul>
+          <li>下家可以选择 <strong>质疑</strong> 上家说谎</li>
+          <li>掀开底牌验证：如果牌不是真牌也不是2 → 质疑成功，出牌者被枪击</li>
+          <li>否则质疑失败，质疑者被枪击</li>
+        </ul>
+        <h3>🔫 左轮手枪</h3>
+        <ul>
+          <li>6发弹仓，1发致命弹，随机排列</li>
+          <li>被击中时随机触发，运气决定生死</li>
+        </ul>
+        <h3>👑 房主操作</h3>
+        <ul>
+          <li>房主可以移除房间内的玩家</li>
+          <li>房主可随时开始游戏（需至少2名玩家）</li>
+          <li>房主离开时自动转让</li>
+        </ul>
+        <h3>👀 观战</h3>
+        <ul>
+          <li>观众可以实时观看对局，但无法操作</li>
+        </ul>
+        <button class="btn-primary close-modal" @click="showRules = false">知道了</button>
+      </div>
+    </div>
 
-    <script>
-        const { createApp, ref, computed, onUnmounted } = Vue;
+    <!-- ── In-Game ── -->
+    <template v-else>
+      <!-- Header -->
+      <div class="game-header">
+        <div class="room-info">
+          <span class="room-code">{{ state.room_code }}</span>
+          <button class="invite-btn" @click="copyInvite">📋 邀请</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="status-badge" :class="state.status">{{ statusLabel }}</span>
+          <span class="timer" v-if="state.status === 'playing' && state.deadline">
+            ⏱ {{ Math.max(0, state.deadline - currentUnix) }}s
+          </span>
+          <button class="btn-rules" style="padding:3px 12px;font-size:.75rem;margin:0;" @click="showRules = true">规则</button>
+        </div>
+      </div>
 
-        createApp({
-            setup() {
-                const connected = ref(false);
-                const roomID = ref('1001');
-                const myID = ref('Player' + Math.floor(Math.random() * 100));
-                const ws = ref(null);
-                const state = ref({ players: [], logs: [], deadline: 0 });
-                const currentUnix = ref(Math.floor(Date.now() / 1000));
-                const selectedIndexes = ref([]);
-                const eventQueue = ref([]);
-                const processingEvent = ref(false);
-                const currentStep = ref('');
-                const currentStepData = ref({});
-                const hasReceivedState = ref(false);
-                const joinedAs = ref('');
+      <!-- Spectator notice -->
+      <div class="spectator-notice" v-if="isSpectator">
+        👀 你以观众身份加入，可以实时观看对局
+      </div>
 
-                // ---- 时钟 ----
-                setInterval(() => { currentUnix.value = Math.floor(Date.now() / 1000); }, 1000);
+      <!-- Players -->
+      <div class="players-area">
+        <div v-for="(p, idx) in state.players" :key="p.id" class="player-box"
+        :class="{ 'active-turn': state.status === 'playing' && state.current_turn === idx && !p.is_spectator, 'dead': !p.is_alive && !p.is_spectator, 'spectator-box': p.is_spectator }">
+        <div class="p-name">
+          {{ p.nickname }}
+          <span class="host-badge" v-if="p.is_host">房主</span>
+          <span class="spec-badge" v-if="p.is_spectator">观众</span>
+          <span v-if="p.nickname === myNickname" style="color:#6c63ff;font-size:.7rem;">(我)</span>
+        </div>
+        <div class="p-stats" v-if="!p.is_spectator">
+          {{ p.is_alive ? '💀 ' + p.bullets + '/6  | 🃏 ' + p.hand.length : '💀 已阵亡' }}
+        </div>
+        <div class="p-stats" v-else style="color:#6a6a8a;">👀 观战中</div>
+        <button class="p-kick" v-if="amHost && !p.is_host && p.id !== myId" @click="kickPlayer(p.id)">
+          移除
+        </button>
+      </div>
+    </div>
 
-                // ---- 事件队列 ----
-                function processQueue() {
-                    if (processingEvent.value || eventQueue.value.length === 0) return;
-                    processingEvent.value = true;
-                    const event = eventQueue.value.shift();
-                    currentStep.value = event.type;
-                    currentStepData.value = event.data;
+    <!-- Table -->
+    <div class="table-area" v-if="state.status === 'playing'">
+      <div class="label">本轮真牌</div>
+      <div class="table-card">{{ state.table_card }}</div>
+      <div class="last-play" v-if="state.last_played_cnt > 0">
+        上家背面向下打了 {{ state.last_played_cnt }} 张牌
+      </div>
+    </div>
+    <div class="table-area" v-if="state.status === 'game_over'">
+      <div class="winner-text" v-if="state.winner">🏆 {{ state.winner }} 获胜！</div>
+      <div class="winner-text" v-else>🏆 游戏结束</div>
+      <button class="btn-success" style="margin-top:10px;padding:8px 24px;" @click="sendAction('reset',{})" v-if="amHost">
+        🔄 再来一局
+      </button>
+      <p v-else style="font-size:.8rem;color:#8a8aaa;margin-top:8px;">等待房主重新开始...</p>
+    </div>
 
-                    let duration = 2000;
-                    if (event.type === 'liar_call') duration = 1500;
-                    if (event.type === 'reveal') duration = 2500;
-                    if (event.type === 'shot') duration = 2000;
+    <!-- Waiting actions -->
+    <div class="actions-row" v-if="state.status === 'waiting'">
+      <button class="btn-primary" @click="sendAction('start',{})" :disabled="!canStart">
+        开始游戏 {{ canStart ? '' : '(需至少2名玩家)' }}
+      </button>
+    </div>
 
-                    setTimeout(() => {
-                        currentStep.value = '';
-                        processingEvent.value = false;
-                        processQueue();
-                    }, duration);
-                }
+    <!-- Hand -->
+    <div class="hand-area" v-if="isPlayer && state.status === 'playing'">
+      <h3>我的手牌（点击选择）</h3>
+      <div class="hand-cards">
+        <div v-for="(c, i) in myHand" :key="i" class="hand-card"
+        :class="{selected: selectedIndexes.includes(i)}"
+        @click="toggleSelect(i)">
+        {{ c }}
+      </div>
+    </div>
+  </div>
 
-                // ---- WebSocket ----
-                const connect = () => {
-                    if (!roomID.value || !myID.value) return;
-                    joinedAs.value = myID.value;
-                    ws.value = new WebSocket(`${window.location.protocol === 'https:' ? "wss" : "ws"}://${window.location.host}/ws?room=${roomID.value}&name=${myID.value}`);
+  <!-- Actions -->
+  <div class="actions-row" v-if="isPlayer && state.status === 'playing' && isMyTurn">
+    <button class="btn-primary" :disabled="!canPlay" @click="playCards">
+      出牌 (选1-3张)
+    </button>
+    <button class="btn-danger" :disabled="!canCallLiar" @click="sendAction('call_liar',{})">
+      🚨 说谎！
+    </button>
+  </div>
 
-                    ws.value.onopen = () => { connected.value = true; };
+  <!-- Logs -->
+  <div class="logs-area" v-if="state.logs && state.logs.length">
+    <div v-for="(log, i) in state.logs" :key="i">{{ log }}</div>
+  </div>
+</template>
 
-                    ws.value.onmessage = (e) => {
-                        const msg = JSON.parse(e.data);
-                        if (msg.type === 'game_state') {
-                            state.value = msg.data;
-                            hasReceivedState.value = true;
-                            if (!isMyTurn.value) selectedIndexes.value = [];
-                        } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
-                            eventQueue.value.push({ type: msg.type, data: msg.data });
-                            processQueue();
-                        }
-                    };
-                };
+<!-- ── Event Overlay ── -->
+<div class="event-overlay" v-if="currentStep !== ''"
+:style="{ background: overlayBg }">
+<template v-if="currentStep === 'liar_call'">
+  <h1>🚨</h1>
+  <h2>{{ currentStepData.caller }} 质疑 {{ currentStepData.accused }} 说谎！</h2>
+</template>
+<template v-if="currentStep === 'reveal'">
+  <h2 style="margin-bottom:6px;">{{ currentStepData.accused }} 的底牌</h2>
+  <div class="reveal-cards">
+    <div v-for="(c, i) in currentStepData.cards" :key="i" class="rcard">{{ c }}</div>
+  </div>
+</template>
+<template v-if="currentStep === 'shot'">
+  <h1>{{ currentStepData.fatal ? '💥' : '💨' }}</h1>
+  <h2>{{ currentStepData.fatal ? '砰！' : '咔哒...' }}</h2>
+  <p style="color:#8a8aaa;margin-top:4px;">{{ currentStepData.target }}</p>
+</template>
+</div>
 
-                // ---- 操作函数 ----
-                const sendAction = (action, payload) => {
-                    ws.value.send(JSON.stringify({ action, payload }));
-                };
+<!-- ── Toast ── -->
+<div class="toast" v-if="toast">{{ toast }}</div>
+</div>
 
-                const toggleSelect = (idx) => {
-                    if (!isMyTurn.value) return;
-                    const pos = selectedIndexes.value.indexOf(idx);
-                    if (pos > -1) {
-                        selectedIndexes.value.splice(pos, 1);
-                    } else {
-                        if (selectedIndexes.value.length < 3) selectedIndexes.value.push(idx);
-                    }
-                };
+<script>
+  const { createApp, ref, computed, watch, onUnmounted, nextTick } = Vue;
 
-                const playCards = () => {
-                    const cardsToPlay = selectedIndexes.value.map(idx => myHand.value[idx]);
-                    sendAction('play_cards', { cards: cardsToPlay });
-                    selectedIndexes.value = [];
-                };
+  createApp({
+    setup() {
+      // ── State ──
+      const nickname = ref('Player' + Math.floor(Math.random() * 100));
+      const roomCodeInput = ref('');
+      const tab = ref('create');
+      const connected = ref(false);
+      const ws = ref(null);
+      const state = ref({ players: [], logs: [], deadline: 0, room_code: '' });
+      const currentUnix = ref(Math.floor(Date.now() / 1000));
+      const selectedIndexes = ref([]);
+      const eventQueue = ref([]);
+      const processingEvent = ref(false);
+      const currentStep = ref('');
+      const currentStepData = ref({});
+      const myNickname = ref('');
+      const toast = ref('');
+      const showRules = ref(false);
+      const errorMsg = ref('');
+      let toastTimer = null;
 
-                // ---- 计算属性 ----
-                const myPlayer = computed(() => state.value.players.find(p => p.nickname === joinedAs.value));
-                const myHand = computed(() => myPlayer.value ? myPlayer.value.hand : []);
-                const amIAlive = computed(() => myPlayer.value && myPlayer.value.is_alive);
+      // ── Clock ──
+      setInterval(() => { currentUnix.value = Math.floor(Date.now() / 1000); }, 1000);
 
-                const isMyTurn = computed(() => {
-                    if (!state.value.players || state.value.current_turn === -1) return false;
+      // ── Computed ──
+      const statusLabel = computed(() => {
+        const m = { waiting: '等待中', playing: '游戏中', game_over: '已结束' };
+        return m[state.value.status] || state.value.status;
+      });
 
-                    return state.value.players[state.value.current_turn].nickname === myID.value;
-                });
+      const myPlayer = computed(() =>
+        state.value.players.find(p => p.nickname === myNickname.value)
+      );
 
-                const prevPlayerEmpty = computed(() => {
-                    if (state.value.last_player === -1) return false;
-                    return state.value.players[state.value.last_player].hand.length === 0;
-                });
+      const myId = computed(() => myPlayer.value ? myPlayer.value.id : '');
+      const myHand = computed(() => myPlayer.value ? (myPlayer.value.hand || []) : []);
+      const isPlayer = computed(() => myPlayer.value && !myPlayer.value.is_spectator);
+      const isSpectator = computed(() => myPlayer.value && myPlayer.value.is_spectator);
+      const amIAlive = computed(() => myPlayer.value && myPlayer.value.is_alive);
+      const amHost = computed(() => myPlayer.value && myPlayer.value.is_host);
 
-                const canPlay = computed(() => {
-                    if (!isMyTurn.value) return false;
-                    if (prevPlayerEmpty.value) return false;
-                    return selectedIndexes.value.length >= 1 && selectedIndexes.value.length <= 3;
-                });
+      const isMyTurn = computed(() => {
+        if (!state.value.players || state.value.current_turn === -1 || !myPlayer.value) return false;
+        return state.value.players[state.value.current_turn].id === myId.value;
+      });
 
-                const canCallLiar = computed(() => {
-                    if (!isMyTurn.value) return false;
-                    if (state.value.last_player === -1) return false;
-                    return true;
-                });
+      const prevPlayerEmpty = computed(() => {
+        if (state.value.last_player === -1) return false;
+        if (state.value.last_player >= state.value.players.length) return false;
+        return state.value.players[state.value.last_player].hand.length === 0;
+      });
 
-                return { hasReceivedState, joinedAs, currentStep, currentStepData, connected, roomID, myID, connect, state, currentUnix, myHand, selectedIndexes, toggleSelect, canPlay, canCallLiar, playCards, sendAction, isMyTurn, amIAlive };
-            }
-        }).mount('#app');
-    </script>
+      const canPlay = computed(() => {
+        if (!isMyTurn.value) return false;
+        return selectedIndexes.value.length >= 1 && selectedIndexes.value.length <= 3;
+      });
+
+      const canCallLiar = computed(() => {
+        if (!isMyTurn.value) return false;
+        if (state.value.last_player === -1) return false;
+        if (state.value.last_player === state.value.current_turn) return false;
+        return true;
+      });
+
+      const canStart = computed(() => {
+        const players = state.value.players.filter(p => !p.is_spectator);
+        return amHost.value && players.length >= 2;
+      });
+
+      const overlayBg = computed(() => {
+        if (currentStep.value === 'liar_call') return 'rgba(200,0,0,0.8)';
+        return 'rgba(0,0,0,0.8)';
+      });
+
+      // ── Event Queue ──
+      function processQueue() {
+        if (processingEvent.value || eventQueue.value.length === 0) return;
+        processingEvent.value = true;
+        const ev = eventQueue.value.shift();
+        currentStep.value = ev.type;
+        currentStepData.value = ev.data;
+        const dur = { liar_call: 1800, reveal: 2600, shot: 2000 };
+        setTimeout(() => {
+          currentStep.value = '';
+          processingEvent.value = false;
+          processQueue();
+        }, dur[ev.type] || 2000);
+      }
+
+      // ── Toast ──
+      function showToast(msg, dur = 2000) {
+        toast.value = msg;
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.value = ''; }, dur);
+      }
+
+      // ── Connect ──
+      function doConnect(url, name) {
+        errorMsg.value = '';
+        myNickname.value = name;
+        ws.value = new WebSocket(url);
+        ws.value.onopen = () => { connected.value = true; };
+        ws.value.onclose = () => {
+          if (connected.value) {
+            showToast('连接已断开');
+            setTimeout(() => { connected.value = false; }, 1500);
+          }
+        };
+        ws.value.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          if (msg.error) {
+            errorMsg.value = msg.error;
+            return;
+          }
+          if (msg.type === 'game_state') {
+            state.value = msg.data;
+            if (!isMyTurn.value) selectedIndexes.value = [];
+          } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
+            eventQueue.value.push({ type: msg.type, data: msg.data });
+            processQueue();
+          }
+        };
+      }
+
+      function tryCreate() {
+        if (!nickname.value.trim()) { errorMsg.value = '请输入昵称'; return; }
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        doConnect(`${proto}://${window.location.host}/ws?action=create&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
+      }
+
+      function tryJoin() {
+        if (!nickname.value.trim()) { errorMsg.value = '请输入昵称'; return; }
+        if (!roomCodeInput.value.trim()) { errorMsg.value = '请输入房间码'; return; }
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        doConnect(`${proto}://${window.location.host}/ws?action=join&code=${encodeURIComponent(roomCodeInput.value.trim().toUpperCase())}&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
+      }
+
+      function trySpectate() {
+        if (!nickname.value.trim()) { nickname.value = '观众' + Math.floor(Math.random() * 100); }
+        if (!roomCodeInput.value.trim()) { errorMsg.value = '请输入房间码'; return; }
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        doConnect(`${proto}://${window.location.host}/ws?action=spectate&code=${encodeURIComponent(roomCodeInput.value.trim().toUpperCase())}&name=${encodeURIComponent(nickname.value.trim())}`, nickname.value.trim());
+      }
+
+      // ── In-game actions ──
+      const sendAction = (action, payload) => {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send(JSON.stringify({ action, payload }));
+        }
+      };
+
+      const toggleSelect = (idx) => {
+        if (!isMyTurn.value) return;
+        const pos = selectedIndexes.value.indexOf(idx);
+        if (pos > -1) {
+          selectedIndexes.value.splice(pos, 1);
+        } else {
+          if (selectedIndexes.value.length < 3) selectedIndexes.value.push(idx);
+        }
+      };
+
+      const playCards = () => {
+        const cards = selectedIndexes.value.map(idx => myHand.value[idx]);
+        sendAction('play_cards', { cards });
+        selectedIndexes.value = [];
+      };
+
+      const kickPlayer = (targetId) => {
+        sendAction('remove_player', { target_id: targetId });
+      };
+
+      const copyInvite = () => {
+        const link = window.location.origin + '?room=' + state.value.room_code;
+        navigator.clipboard.writeText(link).then(() => {
+          showToast('✅ 邀请链接已复制: ' + link);
+        }).catch(() => {
+          showToast('📋 ' + link);
+        });
+      };
+
+      // ── Join from URL ──
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('room')) {
+        roomCodeInput.value = params.get('room').toUpperCase();
+        tab.value = 'join';
+      }
+
+      return {
+        nickname, roomCodeInput, tab, connected, state, currentUnix,
+        selectedIndexes, currentStep, currentStepData, myNickname, myId,
+        toast, showRules, errorMsg,
+        statusLabel, myHand, isPlayer, isSpectator, amIAlive, amHost,
+        isMyTurn, canPlay, canCallLiar, canStart, overlayBg,
+        tryCreate, tryJoin, trySpectate, sendAction, toggleSelect, playCards,
+        kickPlayer, copyInvite,
+      };
+    }
+  }).mount('#app');
+</script>
 
 </body>
-
 </html>

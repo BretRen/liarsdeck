@@ -22,13 +22,15 @@ const (
 )
 
 type Player struct {
-	ID       string   `json:"id"`
-	Nickname string   `json:"nickname"`
-	Hand     []Card   `json:"hand"`
-	Revolver []string `json:"-"`
-	Bullets  int      `json:"bullets"`
-	IsAlive  bool     `json:"is_alive"`
-	Client   *Client  `json:"-"`
+	ID          string  `json:"id"`
+	Nickname    string  `json:"nickname"`
+	Hand        []Card  `json:"hand"`
+	Revolver    []string `json:"-"`
+	Bullets     int     `json:"bullets"`
+	IsAlive     bool    `json:"is_alive"`
+	IsHost      bool    `json:"is_host"`
+	IsSpectator bool    `json:"is_spectator"`
+	Client      *Client `json:"-"`
 }
 
 type GameState struct {
@@ -41,6 +43,7 @@ type GameState struct {
 	Logs          []string  `json:"logs"`
 	Deadline      int64     `json:"deadline"`
 	Winner        string    `json:"winner,omitempty"`
+	RoomCode      string    `json:"room_code"`
 }
 
 type Game struct {
@@ -52,6 +55,7 @@ type Game struct {
 type Room struct {
 	Hub     *Hub
 	ID      string
+	Code    string
 	Clients map[*Client]bool
 	Game    *Game
 	mu      sync.Mutex
@@ -80,13 +84,23 @@ type Hub struct {
 	mu    sync.Mutex
 }
 
-func NewGame() *Game {
+func randomCode(n int) string {
+	const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func NewGame(code string) *Game {
 	return &Game{
 		State: &GameState{
 			Status:      "waiting",
 			Players:     make([]*Player, 0),
 			CurrentTurn: -1,
 			LastPlayer:  -1,
+			RoomCode:    code,
 		},
 	}
 }
@@ -115,7 +129,7 @@ func (g *Game) StartRound() {
 
 	aliveCount := 0
 	for _, p := range g.State.Players {
-		if p.IsAlive {
+		if !p.IsSpectator && p.IsAlive {
 			p.Hand = deck[:5]
 			deck = deck[5:]
 			aliveCount++
@@ -125,7 +139,7 @@ func (g *Game) StartRound() {
 	if aliveCount <= 1 {
 		g.State.Status = "game_over"
 		for _, p := range g.State.Players {
-			if p.IsAlive {
+			if !p.IsSpectator && p.IsAlive {
 				g.State.Winner = p.Nickname
 			}
 		}
@@ -140,20 +154,27 @@ func (g *Game) StartRound() {
 	if g.State.CurrentTurn == -1 {
 		g.State.CurrentTurn = rand.Intn(len(g.State.Players))
 	}
-	if g.State.CurrentTurn >= len(g.State.Players) {
-		g.State.CurrentTurn = 0
+	g.advanceToAlive()
+	g.ResetTimer()
+}
+
+func (g *Game) advanceToAlive() {
+	n := len(g.State.Players)
+	if n == 0 {
+		return
 	}
 	start := g.State.CurrentTurn
-	for !g.State.Players[g.State.CurrentTurn].IsAlive {
-		g.State.CurrentTurn = (g.State.CurrentTurn + 1) % len(g.State.Players)
-		if g.State.CurrentTurn == start {
-			g.State.Status = "game_over"
-			g.State.Winner = "无人存活"
-			g.Log("游戏结束！所有玩家都已淘汰")
+	for i := 0; i < n; i++ {
+		idx := (start + i) % n
+		if g.State.Players[idx].IsAlive && !g.State.Players[idx].IsSpectator {
+			g.State.CurrentTurn = idx
 			return
 		}
 	}
-	g.ResetTimer()
+	// no alive players
+	g.State.Status = "game_over"
+	g.State.Winner = "无人存活"
+	g.Log("游戏结束！所有玩家都已淘汰")
 }
 
 func (g *Game) ResetTimer() {
@@ -162,19 +183,25 @@ func (g *Game) ResetTimer() {
 
 func (g *Game) NextTurn() {
 	start := g.State.CurrentTurn
-	for {
-		g.State.CurrentTurn = (g.State.CurrentTurn + 1) % len(g.State.Players)
-		if g.State.Players[g.State.CurrentTurn].IsAlive {
-			break
-		}
-		if g.State.CurrentTurn == start {
-			g.State.Status = "game_over"
-			g.State.Winner = "无人存活"
-			g.Log("游戏结束！所有玩家都已淘汰")
+	n := len(g.State.Players)
+	for i := 1; i <= n; i++ {
+		idx := (start + i) % n
+		if g.State.Players[idx].IsAlive && !g.State.Players[idx].IsSpectator {
+			g.State.CurrentTurn = idx
+			g.ResetTimer()
 			return
 		}
 	}
-	g.ResetTimer()
+	g.State.Status = "game_over"
+	g.State.Winner = "无人存活"
+	g.Log("游戏结束！所有玩家都已淘汰")
+}
+
+func safeBroadcastShot(room *Room, targetNickname string, fatal bool) {
+	room.BroadcastEvent("shot", map[string]interface{}{
+		"target": targetNickname,
+		"fatal":  fatal,
+	})
 }
 
 func (g *Game) FireGun(playerIdx int) {
@@ -191,10 +218,9 @@ func (g *Game) FireGun(playerIdx int) {
 	p.Revolver = p.Revolver[1:]
 	p.Bullets = len(p.Revolver)
 
-	p.Client.Room.BroadcastEvent("shot", map[string]interface{}{
-		"target": p.Nickname,
-		"fatal":  bullet == "Fatal",
-	})
+	if p.Client != nil {
+		safeBroadcastShot(p.Client.Room, p.Nickname, bullet == "Fatal")
+	}
 
 	if bullet == "Fatal" {
 		p.IsAlive = false
@@ -204,24 +230,69 @@ func (g *Game) FireGun(playerIdx int) {
 	}
 
 	g.State.CurrentTurn = playerIdx
-	start := playerIdx
-	for !g.State.Players[g.State.CurrentTurn].IsAlive {
-		g.State.CurrentTurn = (g.State.CurrentTurn + 1) % len(g.State.Players)
-		if g.State.CurrentTurn == start {
-			g.State.Status = "game_over"
-			g.State.Winner = "无人存活"
-			g.Log("游戏结束！所有玩家都已淘汰")
-			return
+	g.advanceToAlive()
+	if g.State.Status == "game_over" {
+		return
+	}
+
+	// check if only one alive player remains
+	aliveCount := 0
+	var lastAlive *Player
+	for _, pp := range g.State.Players {
+		if !pp.IsSpectator && pp.IsAlive {
+			aliveCount++
+			lastAlive = pp
 		}
 	}
+	if aliveCount <= 1 && lastAlive != nil {
+		g.State.Status = "game_over"
+		g.State.Winner = lastAlive.Nickname
+		g.Log(fmt.Sprintf("🏆 %s 获胜！", lastAlive.Nickname))
+		return
+	}
+
 	g.StartRound()
 }
 
 func (r *Room) Broadcast() {
 	r.Game.mu.Lock()
+	// build a safe copy without private fields
+	type safePlayer struct {
+		ID          string `json:"id"`
+		Nickname    string `json:"nickname"`
+		Hand        []Card `json:"hand"`
+		Bullets     int    `json:"bullets"`
+		IsAlive     bool   `json:"is_alive"`
+		IsHost      bool   `json:"is_host"`
+		IsSpectator bool   `json:"is_spectator"`
+	}
+	players := make([]safePlayer, len(r.Game.State.Players))
+	for i, p := range r.Game.State.Players {
+		players[i] = safePlayer{
+			ID:          p.ID,
+			Nickname:    p.Nickname,
+			Hand:        p.Hand,
+			Bullets:     p.Bullets,
+			IsAlive:     p.IsAlive,
+			IsHost:      p.IsHost,
+			IsSpectator: p.IsSpectator,
+		}
+	}
+	state := map[string]interface{}{
+		"status":         r.Game.State.Status,
+		"players":        players,
+		"current_turn":   r.Game.State.CurrentTurn,
+		"table_card":     r.Game.State.TableCard,
+		"last_player":    r.Game.State.LastPlayer,
+		"last_played_cnt": r.Game.State.LastPlayedCnt,
+		"logs":           r.Game.State.Logs,
+		"deadline":       r.Game.State.Deadline,
+		"winner":         r.Game.State.Winner,
+		"room_code":      r.Game.State.RoomCode,
+	}
 	b, _ := json.Marshal(map[string]interface{}{
 		"type": "game_state",
-		"data": r.Game.State,
+		"data": state,
 	})
 	r.Game.mu.Unlock()
 
@@ -240,10 +311,11 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	accused := g.State.Players[accusedIdx]
 	g.Log(fmt.Sprintf("🚨 %s 质疑 %s 说谎！", caller.Nickname, accused.Nickname))
 
-	caller.Client.Room.BroadcastEvent("liar_call", map[string]interface{}{
+	r := caller.Client.Room
+	r.BroadcastEvent("liar_call", map[string]interface{}{
 		"caller": caller.Nickname, "accused": accused.Nickname,
 	})
-	accused.Client.Room.BroadcastEvent("reveal", map[string]interface{}{
+	r.BroadcastEvent("reveal", map[string]interface{}{
 		"caller":  caller.Nickname,
 		"accused": accused.Nickname,
 		"cards":   g.HiddenCards,
@@ -283,25 +355,78 @@ func (r *Room) BroadcastEvent(eventType string, data interface{}) {
 	}
 }
 
+func (r *Room) getPlayersSummary() []map[string]interface{} {
+	r.Game.mu.Lock()
+	defer r.Game.mu.Unlock()
+	out := make([]map[string]interface{}, 0)
+	for _, p := range r.Game.State.Players {
+		out = append(out, map[string]interface{}{
+			"id":           p.ID,
+			"nickname":     p.Nickname,
+			"is_host":      p.IsHost,
+			"is_spectator": p.IsSpectator,
+			"is_alive":     p.IsAlive,
+			"bullets":      p.Bullets,
+			"hand_count":   len(p.Hand),
+		})
+	}
+	return out
+}
+
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	e := echo.New()
 	e.Static("/", "public")
 
 	e.GET("/ws", func(c echo.Context) error {
-		roomID := c.QueryParam("room")
+		action := c.QueryParam("action")
+		code := c.QueryParam("code")
 		nickname := c.QueryParam("name")
+
 		conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 		if err != nil {
 			return err
 		}
 
 		hub.mu.Lock()
-		room, exists := hub.Rooms[roomID]
-		if !exists {
-			room = &Room{ID: roomID, Clients: make(map[*Client]bool), Game: NewGame()}
-			hub.Rooms[roomID] = room
+
+		if action == "create" {
+			// generate unique room code
+			for {
+				code = randomCode(6)
+				if _, exists := hub.Rooms[code]; !exists {
+					break
+				}
+			}
+			room := &Room{ID: code, Code: code, Clients: make(map[*Client]bool), Game: NewGame(code)}
+			hub.Rooms[code] = room
 			go room.Watchdog()
+			hub.mu.Unlock()
+
+			client := &Client{ID: fmt.Sprintf("%d", rand.Int()), Nickname: nickname, Room: room, Conn: conn, Send: make(chan []byte, 256)}
+			room.mu.Lock()
+			room.Clients[client] = true
+			room.mu.Unlock()
+
+			room.Game.mu.Lock()
+			room.Game.State.Players = append(room.Game.State.Players, &Player{
+				ID: client.ID, Nickname: nickname, Hand: []Card{},
+				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: true, IsSpectator: false, Client: client,
+			})
+			room.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s", nickname, code))
+			room.Game.mu.Unlock()
+
+			go client.WritePump()
+			go client.ReadPump()
+			room.Broadcast()
+			return nil
+		}
+
+		room, exists := hub.Rooms[code]
+		if !exists {
+			hub.mu.Unlock()
+			conn.WriteJSON(map[string]string{"error": "房间不存在"})
+			conn.Close()
+			return nil
 		}
 		hub.mu.Unlock()
 
@@ -310,19 +435,31 @@ func main() {
 		room.Clients[client] = true
 		room.mu.Unlock()
 
-		go client.WritePump()
-		go client.ReadPump()
-
 		room.Game.mu.Lock()
-		if room.Game.State.Status == "waiting" && len(room.Game.State.Players) < 4 {
-			revolver := []string{"Blank", "Blank", "Blank", "Blank", "Blank", "Fatal"}
-			rand.Shuffle(len(revolver), func(i, j int) { revolver[i], revolver[j] = revolver[j], revolver[i] })
-			room.Game.State.Players = append(room.Game.State.Players, &Player{ID: client.ID, Nickname: nickname, Hand: []Card{},
-				Revolver: revolver, Bullets: 6, IsAlive: true, Client: client,
+		isSpectator := action == "spectate"
+		if !isSpectator && room.Game.State.Status == "waiting" && len(room.Game.State.Players) < 4 {
+			room.Game.State.Players = append(room.Game.State.Players, &Player{
+				ID: client.ID, Nickname: nickname, Hand: []Card{},
+				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
 			})
 			room.Game.Log(nickname + " 加入了房间")
+		} else if isSpectator {
+			room.Game.State.Players = append(room.Game.State.Players, &Player{
+				ID: client.ID, Nickname: nickname, Hand: []Card{},
+				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: true, Client: client,
+			})
+			room.Game.Log(fmt.Sprintf("👀 %s 以观众身份加入", nickname))
+		} else if !isSpectator {
+			room.Game.State.Players = append(room.Game.State.Players, &Player{
+				ID: client.ID, Nickname: nickname, Hand: []Card{},
+				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
+			})
+			room.Game.Log(nickname + " 加入了游戏（观战）")
 		}
 		room.Game.mu.Unlock()
+
+		go client.WritePump()
+		go client.ReadPump()
 		room.Broadcast()
 		return nil
 	})
@@ -349,19 +486,43 @@ func (r *Room) RemoveClient(client *Client) {
 		p := r.Game.State.Players[removedIdx]
 		p.Client = nil
 		r.Game.Log(fmt.Sprintf("👋 %s 离开了房间", p.Nickname))
+
 		if r.Game.State.Status == "waiting" {
+			wasHost := p.IsHost
 			r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
+			// transfer host if host left
+			if wasHost && len(r.Game.State.Players) > 0 {
+				for _, pp := range r.Game.State.Players {
+					if !pp.IsSpectator {
+						pp.IsHost = true
+						r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+						break
+					}
+				}
+			}
 		} else {
+			// check if host left during game
+			wasHost := p.IsHost
+			if wasHost {
+				for _, pp := range r.Game.State.Players {
+					if pp.Client != nil && !pp.IsSpectator && pp != p {
+						pp.IsHost = true
+						r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+						break
+					}
+				}
+			}
+
 			aliveCount := 0
 			for _, pp := range r.Game.State.Players {
-				if pp.IsAlive {
+				if !pp.IsSpectator && pp.IsAlive {
 					aliveCount++
 				}
 			}
 			if aliveCount <= 1 {
 				r.Game.State.Status = "game_over"
 				for _, pp := range r.Game.State.Players {
-					if pp.IsAlive {
+					if !pp.IsSpectator && pp.IsAlive {
 						r.Game.State.Winner = pp.Nickname
 					}
 				}
@@ -391,24 +552,75 @@ func (c *Client) ReadPump() {
 		g := c.Room.Game
 		g.mu.Lock()
 
-		if msg.Action == "start" && g.State.Status == "waiting" && len(g.State.Players) >= 2 {
-			g.State.Status = "playing"
-			g.StartRound()
+		// ---- Room management actions ----
+		if msg.Action == "remove_player" {
+			var req struct {
+				TargetID string `json:"target_id"`
+			}
+			json.Unmarshal(msg.Payload, &req)
+
+			// find the caller and verify they're host
+			var callerHost bool
+			for _, p := range g.State.Players {
+				if p.ID == c.ID && p.IsHost {
+					callerHost = true
+					break
+				}
+			}
+			if callerHost {
+				for i, p := range g.State.Players {
+					if p.ID == req.TargetID && p.Client != nil {
+						g.Log(fmt.Sprintf("👢 %s 被房主移出房间", p.Nickname))
+						// disconnect the target client
+						targetClient := p.Client
+						p.Client = nil
+
+						// broadcast removal first
+						g.mu.Unlock()
+						g.State.Players = append(g.State.Players[:i], g.State.Players[i+1:]...)
+						targetClient.Room.RemoveClient(targetClient)
+						g.mu.Lock()
+						break
+					}
+				}
+			}
+			g.mu.Unlock()
+			continue
 		}
 
-		// 🆕 重新开始
+		// ---- Game actions ----
+		if msg.Action == "start" && g.State.Status == "waiting" {
+			// check that caller is host
+			isHost := false
+			for _, p := range g.State.Players {
+				if p.ID == c.ID && p.IsHost {
+					isHost = true
+					break
+				}
+			}
+			playerCount := 0
+			for _, p := range g.State.Players {
+				if !p.IsSpectator {
+					playerCount++
+				}
+			}
+			if isHost && playerCount >= 2 {
+				g.State.Status = "playing"
+				g.StartRound()
+			}
+		}
+
+		// reset
 		if msg.Action == "reset" && g.State.Status == "game_over" {
 			alive := []*Player{}
 			for _, p := range g.State.Players {
 				if p.Client == nil {
-					continue // 🆕 断线的玩家，不回来
+					continue
 				}
 				p.IsAlive = true
 				p.Hand = []Card{}
-				p.Bullets = 6
-				revolver := []string{"Blank", "Blank", "Blank", "Blank", "Blank", "Fatal"}
-				rand.Shuffle(len(revolver), func(i, j int) { revolver[i], revolver[j] = revolver[j], revolver[i] })
-				p.Revolver = revolver
+				p.Bullets = 0
+				p.Revolver = []string{}
 				alive = append(alive, p)
 			}
 			g.State.Players = alive
@@ -417,8 +629,25 @@ func (c *Client) ReadPump() {
 			g.State.CurrentTurn = -1
 			g.State.LastPlayer = -1
 			g.State.LastPlayedCnt = 0
-			// 🆕 如果不够人，回到 waiting 等人加
-			if len(alive) < 2 {
+
+			// ensure first non-spectator is host
+			for _, p := range g.State.Players {
+				p.IsHost = false
+			}
+			for _, p := range g.State.Players {
+				if !p.IsSpectator {
+					p.IsHost = true
+					break
+				}
+			}
+
+			playerCount := 0
+			for _, p := range g.State.Players {
+				if !p.IsSpectator {
+					playerCount++
+				}
+			}
+			if playerCount < 2 {
 				g.State.Status = "waiting"
 				g.Log("等待更多玩家加入...")
 			} else {
@@ -427,43 +656,60 @@ func (c *Client) ReadPump() {
 			}
 		}
 
-		if g.State.Status == "playing" && g.State.Players[g.State.CurrentTurn].ID == c.ID {
-			if msg.Action == "play_cards" {
-				var req struct {
-					Cards []Card `json:"cards"`
-				}
-				json.Unmarshal(msg.Payload, &req)
+		// current player actions
+		if g.State.Status == "playing" && len(g.State.Players) > g.State.CurrentTurn && g.State.CurrentTurn >= 0 {
+			currentPlayer := g.State.Players[g.State.CurrentTurn]
+			if currentPlayer.ID == c.ID {
+				if msg.Action == "play_cards" {
+					var req struct {
+						Cards []Card `json:"cards"`
+					}
+					json.Unmarshal(msg.Payload, &req)
 
-				if len(req.Cards) >= 1 && len(req.Cards) <= 3 {
-					p := g.State.Players[g.State.CurrentTurn]
-					newHand := []Card{}
-					used := make([]bool, len(req.Cards))
-					for _, hc := range p.Hand {
-						removed := false
-						for i, rc := range req.Cards {
-							if !used[i] && hc == rc {
-								used[i] = true
-								removed = true
-								break
+					if len(req.Cards) >= 1 && len(req.Cards) <= 3 {
+						p := g.State.Players[g.State.CurrentTurn]
+						newHand := []Card{}
+						used := make([]bool, len(req.Cards))
+						for _, hc := range p.Hand {
+							removed := false
+							for i, rc := range req.Cards {
+								if !used[i] && hc == rc {
+									used[i] = true
+									removed = true
+									break
+								}
+							}
+							if !removed {
+								newHand = append(newHand, hc)
 							}
 						}
-						if !removed {
-							newHand = append(newHand, hc)
+						p.Hand = newHand
+						g.HiddenCards = req.Cards
+						g.State.LastPlayedCnt = len(req.Cards)
+						g.State.LastPlayer = g.State.CurrentTurn
+
+						g.Log(fmt.Sprintf("%s 宣称打出了 %d 张牌", p.Nickname, len(req.Cards)))
+
+						// check for winner: player emptied their hand
+						if len(p.Hand) == 0 {
+							g.State.Status = "game_over"
+							g.State.Winner = p.Nickname
+							g.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！", p.Nickname))
+							g.mu.Unlock()
+							c.Room.Broadcast()
+							continue
 						}
+
+						g.NextTurn()
 					}
-					p.Hand = newHand
-					g.HiddenCards = req.Cards
-					g.State.LastPlayedCnt = len(req.Cards)
-					g.State.LastPlayer = g.State.CurrentTurn
-					g.Log(fmt.Sprintf("%s 宣称打出了 %d 张真牌", p.Nickname, len(req.Cards)))
-					g.NextTurn()
+				}
+
+				if msg.Action == "call_liar" && g.State.LastPlayer != -1 && g.State.LastPlayer != g.State.CurrentTurn {
+					g.CallLiar(g.State.CurrentTurn, g.State.LastPlayer)
 				}
 			}
-
-			if msg.Action == "call_liar" && g.State.LastPlayer != -1 {
-				g.CallLiar(g.State.CurrentTurn, g.State.LastPlayer)
-			}
 		}
+
 		g.mu.Unlock()
 		c.Room.Broadcast()
 	}
@@ -487,9 +733,16 @@ func (r *Room) Watchdog() {
 				r.Game.mu.Unlock()
 				continue
 			}
-			r.Game.Log(fmt.Sprintf("⏱️ %s 操作超时！系统代管...", r.Game.State.Players[currIdx].Nickname))
-			if r.Game.State.LastPlayer == -1 {
-				p := r.Game.State.Players[currIdx]
+			p := r.Game.State.Players[currIdx]
+			if p.IsSpectator {
+				r.Game.NextTurn()
+				r.Game.mu.Unlock()
+				r.Broadcast()
+				continue
+			}
+			r.Game.Log(fmt.Sprintf("⏱️ %s 操作超时！系统代管...", p.Nickname))
+			if r.Game.State.LastPlayer == -1 || r.Game.State.LastPlayer == currIdx {
+				// first turn of round or same player — must play a card
 				if len(p.Hand) == 0 {
 					r.Game.Log(fmt.Sprintf("%s 没有手牌，跳过", p.Nickname))
 					r.Game.NextTurn()
@@ -500,6 +753,15 @@ func (r *Room) Watchdog() {
 					r.Game.State.LastPlayedCnt = 1
 					r.Game.State.LastPlayer = currIdx
 					r.Game.Log(fmt.Sprintf("%s 强制打出了 1 张牌", p.Nickname))
+
+					if len(p.Hand) == 0 {
+						r.Game.State.Status = "game_over"
+						r.Game.State.Winner = p.Nickname
+						r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！", p.Nickname))
+						r.Game.mu.Unlock()
+						r.Broadcast()
+						continue
+					}
 					r.Game.NextTurn()
 				}
 			} else {
