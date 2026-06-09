@@ -126,7 +126,7 @@ func (g *Game) StartRound() {
 	if g.State.TableCard == Two {
 		g.State.TableCard = King
 	}
-	g.Log(fmt.Sprintf("新的一轮开始！本轮真牌是: %s", g.State.TableCard))
+	g.Log(fmt.Sprintf("新的一轮开始！本轮真牌是: %s / New round! True card: %s", g.State.TableCard, g.State.TableCard))
 
 	aliveCount := 0
 	for _, p := range g.State.Players {
@@ -144,7 +144,7 @@ func (g *Game) StartRound() {
 				g.State.Winner = p.Nickname
 			}
 		}
-		g.Log("游戏结束！")
+		g.Log("游戏结束！ / Game over!")
 		return
 	}
 
@@ -175,7 +175,7 @@ func (g *Game) advanceToAlive() {
 	// no alive players
 	g.State.Status = "game_over"
 	g.State.Winner = "无人存活"
-	g.Log("游戏结束！所有玩家都已淘汰")
+	g.Log("游戏结束！所有玩家都已淘汰 / All players eliminated")
 }
 
 func (g *Game) ResetTimer() {
@@ -195,7 +195,7 @@ func (g *Game) NextTurn() {
 	}
 	g.State.Status = "game_over"
 	g.State.Winner = "无人存活"
-	g.Log("游戏结束！所有玩家都已淘汰")
+	g.Log("游戏结束！所有玩家都已淘汰 / All players eliminated")
 }
 
 func safeBroadcastShot(room *Room, targetNickname string, fatal bool) {
@@ -225,9 +225,9 @@ func (g *Game) FireGun(playerIdx int) {
 
 	if bullet == "Fatal" {
 		p.IsAlive = false
-		g.Log(fmt.Sprintf("💥 砰！%s 抽中致命子弹，被淘汰出局！", p.Nickname))
+		g.Log(fmt.Sprintf("💥 砰！%s 抽中致命子弹，被淘汰出局！ / 💥 BANG! %s was shot fatally!", p.Nickname, p.Nickname))
 	} else {
-		g.Log(fmt.Sprintf("💨 咔哒。%s 抽中空包弹，逃过一劫。", p.Nickname))
+		g.Log(fmt.Sprintf("💨 咔哒。%s 抽中空包弹，逃过一劫。 / 💨 Click. %s survived!", p.Nickname, p.Nickname))
 	}
 
 	g.State.CurrentTurn = playerIdx
@@ -248,7 +248,7 @@ func (g *Game) FireGun(playerIdx int) {
 	if aliveCount <= 1 && lastAlive != nil {
 		g.State.Status = "game_over"
 		g.State.Winner = lastAlive.Nickname
-		g.Log(fmt.Sprintf("🏆 %s 获胜！", lastAlive.Nickname))
+		g.Log(fmt.Sprintf("🏆 %s 获胜！ / 🏆 %s wins!", lastAlive.Nickname, lastAlive.Nickname))
 		return
 	}
 
@@ -310,7 +310,7 @@ func (r *Room) Broadcast() {
 func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	caller := g.State.Players[callerIdx]
 	accused := g.State.Players[accusedIdx]
-	g.Log(fmt.Sprintf("🚨 %s 质疑 %s 说谎！", caller.Nickname, accused.Nickname))
+	g.Log(fmt.Sprintf("🚨 %s 质疑 %s 说谎！ / 🚨 %s calls out %s!", caller.Nickname, accused.Nickname, caller.Nickname, accused.Nickname))
 
 	r := caller.Client.Room
 	r.BroadcastEvent("liar_call", map[string]interface{}{
@@ -323,7 +323,7 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	})
 
 	isLiar := false
-	revealMsg := fmt.Sprintf("%s 的底牌是: ", accused.Nickname)
+		revealMsg := fmt.Sprintf("%s 的底牌是: / %s's cards: ", accused.Nickname, accused.Nickname)
 	for _, c := range g.HiddenCards {
 		revealMsg += string(c) + " "
 		if c != g.State.TableCard && c != Two {
@@ -333,10 +333,10 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	g.Log(revealMsg)
 
 	if isLiar {
-		g.Log("👉 质疑成功！出牌者说谎！")
+		g.Log("👉 质疑成功！出牌者说谎！ / ✅ Liar! The bluffer was caught!")
 		g.FireGun(accusedIdx)
 	} else {
-		g.Log("❌ 质疑失败！出牌者是清白的！")
+		g.Log("❌ 质疑失败！出牌者是清白的！ / ❌ Challenge failed! The cards were honest!")
 		g.FireGun(callerIdx)
 	}
 }
@@ -413,7 +413,7 @@ func main() {
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: true, IsSpectator: false, Client: client,
 			})
-			room.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s", nickname, code))
+			room.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s / 🏠 %s created room %s", nickname, code, nickname, code))
 			room.Game.mu.Unlock()
 
 			go client.WritePump()
@@ -452,17 +452,17 @@ func main() {
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
 			})
-			room.Game.Log(nickname + " 加入了房间")
+			room.Game.Log(nickname + " 加入了房间 / " + nickname + " joined the room")
 		} else if isSpectator {
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: true, Client: client,
 			})
-			room.Game.Log(fmt.Sprintf("👀 %s 以观众身份加入", nickname))
+			room.Game.Log(fmt.Sprintf("👀 %s 以观众身份加入 / 👀 %s is spectating", nickname, nickname))
 		} else if !isSpectator && room.Game.State.Status == "waiting" {
-			room.Game.Log(fmt.Sprintf("⚠️ %s 尝试加入但房间已满", nickname))
+			room.Game.Log(fmt.Sprintf("⚠️ %s 尝试加入但房间已满 / ⚠️ %s tried to join but room is full", nickname, nickname))
 		} else if !isSpectator {
-			room.Game.Log(fmt.Sprintf("👋 %s 尝试加入进行中的游戏，转为观战", nickname))
+			room.Game.Log(fmt.Sprintf("👋 %s 尝试加入进行中的游戏，转为观战 / 👋 %s joined as spectator (game in progress)", nickname, nickname))
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: true, Client: client,
@@ -498,7 +498,7 @@ func (r *Room) RemoveClient(client *Client) {
 		if removedIdx != -1 {
 			p := r.Game.State.Players[removedIdx]
 			p.Client = nil
-			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间", p.Nickname))
+			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间 / 👋 %s left the room", p.Nickname, p.Nickname))
 
 			if r.Game.State.Status == "waiting" {
 				wasHost := p.IsHost
@@ -507,7 +507,7 @@ func (r *Room) RemoveClient(client *Client) {
 					for _, pp := range r.Game.State.Players {
 						if !pp.IsSpectator {
 							pp.IsHost = true
-							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主 / 👑 %s is the new host", pp.Nickname, pp.Nickname))
 							break
 						}
 					}
@@ -518,7 +518,7 @@ func (r *Room) RemoveClient(client *Client) {
 					for _, pp := range r.Game.State.Players {
 						if pp.Client != nil && !pp.IsSpectator && pp != p {
 							pp.IsHost = true
-							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主", pp.Nickname))
+							r.Game.Log(fmt.Sprintf("👑 %s 成为新房主 / 👑 %s is the new host", pp.Nickname, pp.Nickname))
 							break
 						}
 					}
@@ -537,7 +537,7 @@ func (r *Room) RemoveClient(client *Client) {
 							r.Game.State.Winner = pp.Nickname
 						}
 					}
-					r.Game.Log("游戏结束！其他玩家已离开")
+					r.Game.Log("游戏结束！其他玩家已离开 / Game over! Other players left")
 				} else if r.Game.State.CurrentTurn == removedIdx {
 					r.Game.NextTurn()
 				}
@@ -581,7 +581,7 @@ func (c *Client) ReadPump() {
 			if callerHost {
 				for _, p := range g.State.Players {
 					if p.ID == req.TargetID && p.Client != nil {
-						g.Log(fmt.Sprintf("👢 %s 被房主移出房间", p.Nickname))
+						g.Log(fmt.Sprintf("👢 %s 被房主移出房间 / 👢 %s was removed by host", p.Nickname, p.Nickname))
 						p.Client.Conn.Close()
 						break
 					}
@@ -653,7 +653,7 @@ func (c *Client) ReadPump() {
 			}
 			if playerCount < 2 {
 				g.State.Status = "waiting"
-				g.Log("等待更多玩家加入...")
+				g.Log("等待更多玩家加入... / Waiting for more players...")
 			} else {
 				g.State.Status = "playing"
 				g.StartRound()
@@ -692,16 +692,28 @@ func (c *Client) ReadPump() {
 						g.State.LastPlayedCnt = len(req.Cards)
 						g.State.LastPlayer = g.State.CurrentTurn
 
-						g.Log(fmt.Sprintf("%s 宣称打出了 %d 张牌", p.Nickname, len(req.Cards)))
+						g.Log(fmt.Sprintf("%s 宣称打出了 %d 张牌 / %s played %d card(s)", p.Nickname, len(req.Cards), p.Nickname, len(req.Cards)))
 
 						// check for winner: player emptied their hand
 						if len(p.Hand) == 0 {
-							g.State.Status = "game_over"
-							g.State.Winner = p.Nickname
-							g.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！", p.Nickname))
-							g.mu.Unlock()
-							c.Room.Broadcast()
-							continue
+							// count alive non-spectator players
+							aliveCount := 0
+							for _, pp := range g.State.Players {
+								if !pp.IsSpectator && pp.IsAlive {
+									aliveCount++
+								}
+							}
+							if aliveCount == 2 {
+								// 2-player: opponent must call liar before winning
+								g.Log(fmt.Sprintf("%s 打完了所有手牌！对手可以质疑 / %s emptied their hand! Opponent may call liar", p.Nickname, p.Nickname))
+							} else {
+								g.State.Status = "game_over"
+								g.State.Winner = p.Nickname
+								g.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / %s emptied their hand and wins!", p.Nickname, p.Nickname))
+								g.mu.Unlock()
+								c.Room.Broadcast()
+								continue
+							}
 						}
 
 						g.NextTurn()
@@ -744,11 +756,11 @@ func (r *Room) Watchdog() {
 				r.Broadcast()
 				continue
 			}
-			r.Game.Log(fmt.Sprintf("⏱️ %s 操作超时！系统代管...", p.Nickname))
+			r.Game.Log(fmt.Sprintf("⏱️ %s 操作超时！系统代管... / ⏱️ %s timed out! Auto-playing...", p.Nickname, p.Nickname))
 			if r.Game.State.LastPlayer == -1 || r.Game.State.LastPlayer == currIdx {
 				// first turn of round or same player — must play a card
 				if len(p.Hand) == 0 {
-					r.Game.Log(fmt.Sprintf("%s 没有手牌，跳过", p.Nickname))
+					r.Game.Log(fmt.Sprintf("%s 没有手牌，跳过 / %s has no cards, skipping", p.Nickname, p.Nickname))
 					r.Game.NextTurn()
 				} else {
 					card := p.Hand[0]
@@ -756,12 +768,12 @@ func (r *Room) Watchdog() {
 					r.Game.HiddenCards = []Card{card}
 					r.Game.State.LastPlayedCnt = 1
 					r.Game.State.LastPlayer = currIdx
-					r.Game.Log(fmt.Sprintf("%s 强制打出了 1 张牌", p.Nickname))
+					r.Game.Log(fmt.Sprintf("%s 强制打出了 1 张牌 / %s auto-played 1 card", p.Nickname, p.Nickname))
 
 					if len(p.Hand) == 0 {
 						r.Game.State.Status = "game_over"
 						r.Game.State.Winner = p.Nickname
-						r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！", p.Nickname))
+						r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / 🏆 %s emptied their hand and wins!", p.Nickname, p.Nickname))
 						r.Game.mu.Unlock()
 						r.Broadcast()
 						continue
@@ -770,7 +782,7 @@ func (r *Room) Watchdog() {
 				}
 			} else {
 				if p.Client == nil {
-					r.Game.Log(fmt.Sprintf("%s 已断线，跳过", p.Nickname))
+					r.Game.Log(fmt.Sprintf("%s 已断线，跳过 / %s disconnected, skipping", p.Nickname, p.Nickname))
 					r.Game.NextTurn()
 				} else {
 					r.Game.CallLiar(currIdx, r.Game.State.LastPlayer)

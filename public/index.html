@@ -736,6 +736,7 @@ createApp({
     const toast = ref('');
     const showRules = ref(false);
     const errorMsg = ref('');
+    const pendingState = ref(null);
     const lang = ref(localStorage.getItem('liarsdeck-lang') || 'zh');
     let toastTimer = null;
 
@@ -762,7 +763,15 @@ createApp({
       return state.value.players[state.value.current_turn].id === myId.value;
     });
 
-    const canPlay = computed(() => isMyTurn.value && selectedIndexes.value.length>=1 && selectedIndexes.value.length<=3);
+    const canPlay = computed(() => {
+      if (!isMyTurn.value) return false;
+      // 2-player: if last player emptied hand, must call liar
+      if (state.value.last_player !== -1 && state.value.last_player < state.value.players.length) {
+        const lastP = state.value.players[state.value.last_player];
+        if (lastP.hand && lastP.hand.length === 0) return false;
+      }
+      return selectedIndexes.value.length>=1 && selectedIndexes.value.length<=3;
+    });
     const canCallLiar = computed(() => isMyTurn.value && state.value.last_player!==-1 && state.value.last_player!==state.value.current_turn);
 
     const canStart = computed(() => {
@@ -780,7 +789,9 @@ createApp({
       currentStep.value = ev.type;
       currentStepData.value = ev.data;
       const dur = { liar_call:1800, reveal:2600, shot:2000 };
-      setTimeout(() => { currentStep.value=''; processingEvent.value=false; processQueue(); }, dur[ev.type]||2000);
+      setTimeout(() => { currentStep.value=''; processingEvent.value=false;
+        if (eventQueue.value.length===0 && pendingState.value) { state.value = pendingState.value; pendingState.value = null; if (!isMyTurn.value) selectedIndexes.value = []; }
+        processQueue(); }, dur[ev.type]||2000);
     }
 
     // ── Toast ──
@@ -804,8 +815,12 @@ createApp({
           const msg = JSON.parse(e.data);
           if (msg.error) { errorMsg.value = msg.error; return; }
           if (msg.type === 'game_state') {
-            state.value = msg.data;
-            if (!isMyTurn.value) selectedIndexes.value = [];
+            if (currentStep.value !== '') {
+              pendingState.value = msg.data;
+            } else {
+              state.value = msg.data;
+              if (!isMyTurn.value) selectedIndexes.value = [];
+            }
           } else if (['liar_call','reveal','shot'].includes(msg.type)) {
             eventQueue.value.push({ type:msg.type, data:msg.data });
             processQueue();
@@ -829,7 +844,7 @@ createApp({
 
     function trySpectate() {
       if (!nickname.value.trim()) nickname.value = 'Spectator'+Math.floor(Math.random()*100);
-      if (!roomCodeInput.value.trim()) { errorMsg.value = t('err_code')||'Please enter a room code'; return; }
+      if (!roomCodeInput.value.trim()) { errorMsg.value = t('err_code'); return; }
       const proto = window.location.protocol==='https:'?'wss':'ws';
       doConnect(proto+'://'+window.location.host+'/ws?action=spectate&code='+encodeURIComponent(roomCodeInput.value.trim().toUpperCase())+'&name='+encodeURIComponent(nickname.value.trim()), nickname.value.trim());
     }
