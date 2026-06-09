@@ -323,7 +323,7 @@ func (g *Game) CallLiar(callerIdx, accusedIdx int) {
 	})
 
 	isLiar := false
-		revealMsg := fmt.Sprintf("%s 的底牌是: / %s's cards: ", accused.Nickname, accused.Nickname)
+	revealMsg := fmt.Sprintf("%s 的底牌是: / %s's cards: ", accused.Nickname, accused.Nickname)
 	for _, c := range g.HiddenCards {
 		revealMsg += string(c) + " "
 		if c != g.State.TableCard && c != Two {
@@ -771,12 +771,23 @@ func (r *Room) Watchdog() {
 					r.Game.Log(fmt.Sprintf("%s 强制打出了 1 张牌 / %s auto-played 1 card", p.Nickname, p.Nickname))
 
 					if len(p.Hand) == 0 {
-						r.Game.State.Status = "game_over"
-						r.Game.State.Winner = p.Nickname
-						r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / 🏆 %s emptied their hand and wins!", p.Nickname, p.Nickname))
-						r.Game.mu.Unlock()
-						r.Broadcast()
-						continue
+						// check 2-player case
+						aliveCount := 0
+						for _, pp := range r.Game.State.Players {
+							if !pp.IsSpectator && pp.IsAlive {
+								aliveCount++
+							}
+						}
+						if aliveCount == 2 {
+							r.Game.Log(fmt.Sprintf("%s 打完了所有手牌！对手可以质疑 / %s emptied their hand! Opponent may call liar", p.Nickname, p.Nickname))
+						} else {
+							r.Game.State.Status = "game_over"
+							r.Game.State.Winner = p.Nickname
+							r.Game.Log(fmt.Sprintf("🏆 %s 打完了所有手牌，获胜！ / 🏆 %s emptied their hand and wins!", p.Nickname, p.Nickname))
+							r.Game.mu.Unlock()
+							r.Broadcast()
+							continue
+						}
 					}
 					r.Game.NextTurn()
 				}
