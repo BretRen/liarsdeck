@@ -438,7 +438,16 @@ func main() {
 
 		room.Game.mu.Lock()
 		isSpectator := action == "spectate"
-		if !isSpectator && room.Game.State.Status == "waiting" && len(room.Game.State.Players) < 4 {
+
+		// count non-spectator players
+		playerCount := 0
+		for _, pp := range room.Game.State.Players {
+			if !pp.IsSpectator {
+				playerCount++
+			}
+		}
+
+		if !isSpectator && room.Game.State.Status == "waiting" && playerCount < 4 {
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
@@ -450,12 +459,14 @@ func main() {
 				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: true, Client: client,
 			})
 			room.Game.Log(fmt.Sprintf("👀 %s 以观众身份加入", nickname))
+		} else if !isSpectator && room.Game.State.Status == "waiting" {
+			room.Game.Log(fmt.Sprintf("⚠️ %s 尝试加入但房间已满", nickname))
 		} else if !isSpectator {
+			room.Game.Log(fmt.Sprintf("👋 %s 尝试加入进行中的游戏，转为观战", nickname))
 			room.Game.State.Players = append(room.Game.State.Players, &Player{
 				ID: client.ID, Nickname: nickname, Hand: []Card{},
-				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: false, Client: client,
+				Revolver: []string{}, Bullets: 0, IsAlive: true, IsHost: false, IsSpectator: true, Client: client,
 			})
-			room.Game.Log(nickname + " 加入了游戏（观战）")
 		}
 		room.Game.mu.Unlock()
 
@@ -758,7 +769,12 @@ func (r *Room) Watchdog() {
 					r.Game.NextTurn()
 				}
 			} else {
-				r.Game.CallLiar(currIdx, r.Game.State.LastPlayer)
+				if p.Client == nil {
+					r.Game.Log(fmt.Sprintf("%s 已断线，跳过", p.Nickname))
+					r.Game.NextTurn()
+				} else {
+					r.Game.CallLiar(currIdx, r.Game.State.LastPlayer)
+				}
 			}
 		}
 		r.Game.mu.Unlock()
