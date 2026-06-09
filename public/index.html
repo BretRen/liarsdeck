@@ -205,6 +205,7 @@
     .badge.spec { background: #e8e8ed; color: #86868b; }
     .badge.me { color: #0071e3; font-size: .7rem; }
     .p-box .p-stats { font-size: .75rem; color: #86868b; margin-top: 2px; }
+    .p-box .p-ready { font-size: .7rem; margin-top: 2px; font-weight: 600; }
     .p-box .p-kick {
       margin-top: 5px;
       font-size: .65rem;
@@ -499,6 +500,9 @@
           {{ p.is_alive ? '💀 '+p.bullets+'/6  | 🃏 '+p.hand.length : t('dead') }}
         </div>
         <div class="p-stats" v-else style="color:#aeaeb2;">👀 {{ t('watching') }}</div>
+        <div class="p-ready" v-if="state.status==='waiting' && !p.is_spectator">
+          {{ p.is_ready ? '✅ '+t('ready') : '⏳ '+t('not_ready') }}
+        </div>
         <button class="p-kick" v-if="amHost && !p.is_host && p.id!==myId" @click="kickPlayer(p.id)">{{ t('kick') }}</button>
       </div>
     </div>
@@ -521,8 +525,9 @@
 
     <!-- Waiting actions -->
     <div class="act-row" v-if="state.status==='waiting'">
-      <button class="btn-blue" @click="sendAction('start',{})" :disabled="!canStart">
-        {{ t('start_game') }}{{ canStart ? '' : ' ('+t('need_players')+')' }}
+      <button class="btn-blue" @click="sendAction('ready',{})">{{ t('toggle_ready') }}</button>
+      <button class="btn-green" @click="sendAction('start',{})" :disabled="!canStart">
+        {{ t('start_game') }}{{ canStart ? '' : allReady ? ' ('+t('need_players')+')' : ' ('+t('all_ready_needed')+')' }}
       </button>
     </div>
 
@@ -647,6 +652,10 @@ const i18n = {
     err_code: '请输入房间码',
     copied: '已复制邀请链接',
     reconnecting: '重新连接中...',
+    ready: '已准备',
+    not_ready: '未准备',
+    toggle_ready: '准备 / 取消',
+    all_ready_needed: '等待全员准备',
   },
   en: {
     subtitle: 'A psychological bluffing card game',
@@ -716,6 +725,10 @@ const i18n = {
     err_code: 'Please enter a room code',
     copied: 'Invite link copied',
     reconnecting: 'Reconnecting...',
+    ready: 'Ready',
+    not_ready: 'Not Ready',
+    toggle_ready: 'Ready / Unready',
+    all_ready_needed: 'Waiting for all',
   }
 };
 
@@ -780,7 +793,13 @@ createApp({
 
     const canStart = computed(() => {
       if (!amHost.value) return false;
-      return state.value.players.filter(p=>!p.is_spectator).length >= 2;
+      const players = state.value.players.filter(p=>!p.is_spectator);
+      return players.length >= 2 && players.every(p => p.is_ready);
+    });
+
+    const allReady = computed(() => {
+      const players = state.value.players.filter(p=>!p.is_spectator);
+      return players.length >= 2 && players.every(p => p.is_ready);
     });
 
     const overlayBg = computed(() => currentStep.value==='liar_call' ? 'rgba(255,59,48,.12)' : 'rgba(0,0,0,.06)');
@@ -929,7 +948,7 @@ createApp({
       selectedIndexes, currentStep, currentStepData, myNickname, myId,
       toast, showRules, errorMsg, lang, t,
       statusLabel, myHand, isPlayer, isSpectator, amHost,
-      isMyTurn, canPlay, canCallLiar, canStart, overlayBg,
+      isMyTurn, canPlay, canCallLiar, canStart, allReady, overlayBg,
       tryCreate, tryJoin, trySpectate, sendAction, toggleSelect, playCards,
       kickPlayer, copyInvite,
     };

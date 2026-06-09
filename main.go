@@ -30,6 +30,7 @@ type Player struct {
 	IsAlive     bool    `json:"is_alive"`
 	IsHost      bool    `json:"is_host"`
 	IsSpectator bool    `json:"is_spectator"`
+	IsReady     bool    `json:"is_ready"`
 	Client      *Client `json:"-"`
 }
 
@@ -133,6 +134,19 @@ func (g *Game) StartRound() {
 		g.State.TableCard = King
 	}
 	g.Log(fmt.Sprintf("新的一轮开始！本轮真牌是: %s / New round! True card: %s", g.State.TableCard, g.State.TableCard))
+
+	// shuffle alive players for new round order
+	alive := make([]*Player, 0)
+	others := make([]*Player, 0)
+	for _, p := range g.State.Players {
+		if !p.IsSpectator && p.IsAlive {
+			alive = append(alive, p)
+		} else {
+			others = append(others, p)
+		}
+	}
+	rand.Shuffle(len(alive), func(i, j int) { alive[i], alive[j] = alive[j], alive[i] })
+	g.State.Players = append(alive, others...)
 
 	aliveCount := 0
 	for _, p := range g.State.Players {
@@ -272,6 +286,7 @@ func (r *Room) Broadcast() {
 		IsAlive     bool   `json:"is_alive"`
 		IsHost      bool   `json:"is_host"`
 		IsSpectator bool   `json:"is_spectator"`
+		IsReady     bool   `json:"is_ready"`
 	}
 	players := make([]safePlayer, len(r.Game.State.Players))
 	for i, p := range r.Game.State.Players {
@@ -283,6 +298,7 @@ func (r *Room) Broadcast() {
 			IsAlive:     p.IsAlive,
 			IsHost:      p.IsHost,
 			IsSpectator: p.IsSpectator,
+			IsReady:     p.IsReady,
 		}
 	}
 	state := map[string]interface{}{
@@ -565,6 +581,22 @@ func (c *Client) ReadPump() {
 		g.mu.Lock()
 
 		// ---- Room management actions ----
+		if msg.Action == "ready" {
+			for _, p := range g.State.Players {
+				if p.ID == c.ID {
+					p.IsReady = !p.IsReady
+					status := "未准备"
+					en := "is not ready"
+					if p.IsReady { status = "已准备"; en = "is ready" }
+					g.Log(fmt.Sprintf("✅ %s %s / ✅ %s %s", p.Nickname, status, p.Nickname, en))
+					break
+				}
+			}
+			g.mu.Unlock()
+			c.Room.Broadcast()
+			continue
+		}
+
 		if msg.Action == "remove_player" {
 			var req struct {
 				TargetID string `json:"target_id"`
@@ -602,15 +634,26 @@ func (c *Client) ReadPump() {
 					break
 				}
 			}
+			if !isHost {
+				g.mu.Unlock()
+				continue
+			}
+			// check all non-spectator players are ready
+			allReady := true
 			playerCount := 0
 			for _, p := range g.State.Players {
 				if !p.IsSpectator {
 					playerCount++
+					if !p.IsReady {
+						allReady = false
+					}
 				}
 			}
-			if isHost && playerCount >= 2 {
+			if isHost && playerCount >= 2 && allReady {
 				g.State.Status = "playing"
 				g.StartRound()
+			} else if !allReady {
+				g.Log("⏳ 等待所有玩家准备 / ⏳ Waiting for all players to ready up")
 			}
 		}
 
@@ -625,6 +668,7 @@ func (c *Client) ReadPump() {
 				p.Hand = []Card{}
 				p.Bullets = 0
 				p.Revolver = []string{}
+				p.IsReady = false
 				alive = append(alive, p)
 			}
 			g.State.Players = alive
@@ -645,19 +689,8 @@ func (c *Client) ReadPump() {
 				}
 			}
 
-			playerCount := 0
-			for _, p := range g.State.Players {
-				if !p.IsSpectator {
-					playerCount++
-				}
-			}
-			if playerCount < 2 {
-				g.State.Status = "waiting"
-				g.Log("等待更多玩家加入... / Waiting for more players...")
-			} else {
-				g.State.Status = "playing"
-				g.StartRound()
-			}
+			g.State.Status = "waiting"
+			g.Log("重新开始！请准备 / New game! Please ready up")
 		}
 
 		// current player actions
