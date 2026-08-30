@@ -134,7 +134,7 @@ const isCheckingAuth = ref(false);
 const secretInput = ref('');
 const savedSecret = ref('');
 
-const currentVersion = ref('v2.0.5');
+const currentVersion = ref('v2.0.6');
 const latestVersion = ref('');
 const hasUpdate = ref(false);
 const releaseName = ref('');
