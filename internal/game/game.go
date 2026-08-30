@@ -248,10 +248,10 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 	g.State.LastPlayedCnt = len(cards)
 	g.State.LastPlayer = playerIdx
 
-	g.Log(fmt.Sprintf("🎴 %s 打出了 %d 张暗牌 / 🎴 %s played %d cards", p.Nickname, len(cards), p.Nickname, len(cards)))
+	g.Log(fmt.Sprintf("%s 打出了 %d 张暗牌 / %s played %d cards", p.Nickname, len(cards), p.Nickname, len(cards)))
 
 	if len(p.Hand) == 0 {
-		g.Log(fmt.Sprintf("⚡ %s 手牌已清空！下家必须质疑！ / ⚡ %s has 0 cards left! Next player must call liar!", p.Nickname, p.Nickname))
+		g.Log(fmt.Sprintf("%s 手牌已清空！下家必须质疑！ / %s has 0 cards left! Next player must call liar!", p.Nickname, p.Nickname))
 	}
 
 	g.NextTurn()
@@ -324,7 +324,7 @@ func (g *Game) CallLiar(
 		}
 
 		if len(accused.Hand) == 0 {
-			g.Log(fmt.Sprintf("🎴 %s 成功出清全部手牌且诚实无欺！本轮结束，重新发牌！ / 🎴 %s emptied all cards honestly! Dealing new round!", accused.Nickname, accused.Nickname))
+			g.Log(fmt.Sprintf("%s 成功出清全部手牌，本轮结束，重新发牌！ / %s emptied all cards, dealing new round!", accused.Nickname, accused.Nickname))
 		}
 
 		// 存活人数 > 1，重新洗牌发牌开启新一轮
