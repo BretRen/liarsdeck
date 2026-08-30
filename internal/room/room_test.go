@@ -98,3 +98,31 @@ func TestBroadcastMasking(t *testing.T) {
 		t.Fatalf("expected broadcast message in c1.Send")
 	}
 }
+
+func TestRemovePlayerOffline(t *testing.T) {
+	hub := NewHub()
+	r := hub.CreateRoom()
+
+	c1 := &Client{ID: "p1", Nickname: "Host", Room: r, Send: make(chan []byte, 10)}
+	r.AddClient(c1)
+
+	p1 := &model.Player{ID: "p1", Nickname: "Host", IsAlive: true, IsReady: true, IsHost: true, ClientRef: c1}
+	p2 := &model.Player{ID: "p2", Nickname: "OfflineGhost", IsAlive: true, IsReady: false, IsHost: false, ClientRef: nil} // Offline
+
+	r.Game.State.Players = []*model.Player{p1, p2}
+	r.Game.State.Status = model.StatusWaiting
+
+	// Host kicks the offline player
+	reqPayload, _ := json.Marshal(model.RemovePlayerPayload{TargetID: "p2"})
+	r.HandleClientMessage(c1, model.WSMessage{
+		Action:  "remove_player",
+		Payload: reqPayload,
+	})
+
+	if len(r.Game.State.Players) != 1 {
+		t.Fatalf("expected 1 player left after kicking offline player, got %d", len(r.Game.State.Players))
+	}
+	if r.Game.State.Players[0].Nickname != "Host" {
+		t.Fatalf("expected Host to remain, got %s", r.Game.State.Players[0].Nickname)
+	}
+}

@@ -220,4 +220,27 @@ func TestPauseTimeoutKill(t *testing.T) {
 	}
 }
 
+func TestResetGameCleansDisconnectedPlayers(t *testing.T) {
+	g := NewGame("TEST07")
+	p1 := &model.Player{ID: "p1", Nickname: "Alice", IsAlive: true, IsHost: true, ClientRef: nil} // Disconnected host
+	p2 := &model.Player{ID: "p2", Nickname: "Bob", IsAlive: true, IsHost: false, ClientRef: "connected"} // Connected player
+	g.State.Players = []*model.Player{p1, p2}
+	g.State.Status = model.StatusGameOver
+
+	g.ResetGame()
+
+	if len(g.State.Players) != 1 {
+		t.Fatalf("expected only 1 connected player remaining after reset, got %d", len(g.State.Players))
+	}
+	if g.State.Players[0].Nickname != "Bob" {
+		t.Fatalf("expected Bob to remain, got %s", g.State.Players[0].Nickname)
+	}
+	if !g.State.Players[0].IsHost {
+		t.Fatalf("Bob should now be host")
+	}
+	if g.State.Status != model.StatusWaiting {
+		t.Fatalf("expected StatusWaiting, got %s", g.State.Status)
+	}
+}
+
 

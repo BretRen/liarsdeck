@@ -119,7 +119,7 @@ func (r *Room) RemoveClient(client *Client) {
 		p := r.Game.State.Players[removedIdx]
 		p.ClientRef = nil
 
-		if r.Game.State.Status == model.StatusWaiting || p.IsSpectator {
+		if r.Game.State.Status == model.StatusWaiting || r.Game.State.Status == model.StatusGameOver || p.IsSpectator {
 			r.Game.Log(fmt.Sprintf("👋 %s 离开了房间 / 👋 %s left the room", p.Nickname, p.Nickname))
 			wasHost := p.IsHost
 			r.Game.State.Players = append(r.Game.State.Players[:removedIdx], r.Game.State.Players[removedIdx+1:]...)
@@ -211,14 +211,21 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 				}
 			}
 			if callerIsHost {
-				for _, p := range g.State.Players {
-					if p.ID == req.TargetID && p.ClientRef != nil {
-						g.Log(fmt.Sprintf("👢 %s 被房主移出房间 / 👢 %s was removed by host", p.Nickname, p.Nickname))
-						if targetClient, ok := p.ClientRef.(*Client); ok && targetClient != nil {
-							targetClient.Close()
-						}
+				kickIdx := -1
+				for i, p := range g.State.Players {
+					if p.ID == req.TargetID {
+						kickIdx = i
 						break
 					}
+				}
+				if kickIdx != -1 {
+					kickedPlayer := g.State.Players[kickIdx]
+					g.Log(fmt.Sprintf("👢 %s 被房主移出房间 / 👢 %s was removed by host", kickedPlayer.Nickname, kickedPlayer.Nickname))
+					if targetClient, ok := kickedPlayer.ClientRef.(*Client); ok && targetClient != nil {
+						kickedPlayer.ClientRef = nil
+						targetClient.Close()
+					}
+					g.State.Players = append(g.State.Players[:kickIdx], g.State.Players[kickIdx+1:]...)
 				}
 			}
 		}
@@ -242,7 +249,7 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 			for _, p := range g.State.Players {
 				if !p.IsSpectator {
 					playerCount++
-					if !p.IsReady {
+					if !p.IsReady || p.ClientRef == nil {
 						allReady = false
 					}
 				}
