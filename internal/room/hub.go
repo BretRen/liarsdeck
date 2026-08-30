@@ -1,7 +1,8 @@
 package room
 
 import (
-	"math/rand"
+	cryptorand "crypto/rand"
+	"math/big"
 	"sync"
 )
 
@@ -16,11 +17,17 @@ func NewHub() *Hub {
 	}
 }
 
+// RandomCode 使用加密安全的 crypto/rand 生成 6 位随机大写字母/数字房间码
 func RandomCode(n int) string {
 	const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		num, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			b[i] = letters[0]
+			continue
+		}
+		b[i] = letters[num.Int64()]
 	}
 	return string(b)
 }
@@ -60,4 +67,3 @@ func (h *Hub) RemoveRoom(code string) {
 
 	delete(h.Rooms, code)
 }
-

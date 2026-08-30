@@ -70,6 +70,12 @@ func main() {
 	e.File("/", "public/index.html")
 
 	log.Printf("🃏 Liar's Deck 服务器已启动: http://localhost:%s", port)
+	if os.Getenv("ADMIN_SECRET") != "" {
+		log.Printf("🛡️ 管理员接口已启用 (ADMIN_SECRET 已配置)")
+	} else {
+		log.Printf("ℹ️ 未配置 ADMIN_SECRET 环境变量，管理员接口 (/api/admin/*) 已安全禁用")
+	}
+
 	if err := e.Start(":" + port); err != nil {
 		log.Fatalf("服务器异常退出: %v", err)
 	}

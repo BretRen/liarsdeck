@@ -1,10 +1,23 @@
 package game
 
 import (
-	"math/rand"
+	cryptorand "crypto/rand"
+	"math/big"
 
 	"pdnode.com/play/liarsbar-web/internal/model"
 )
+
+// CryptoShuffle 使用加密安全的 Fisher-Yates 洗牌算法，彻底避免 math/rand 默认确定性种子问题
+func CryptoShuffle(n int, swap func(i, j int)) {
+	for i := n - 1; i > 0; i-- {
+		jBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			continue
+		}
+		j := int(jBig.Int64())
+		swap(i, j)
+	}
+}
 
 func NewDeck() []model.Card {
 	deck := []model.Card{
@@ -18,7 +31,7 @@ func NewDeck() []model.Card {
 }
 
 func ShuffleCards(cards []model.Card) {
-	rand.Shuffle(len(cards), func(i, j int) {
+	CryptoShuffle(len(cards), func(i, j int) {
 		cards[i], cards[j] = cards[j], cards[i]
 	})
 }
@@ -32,7 +45,7 @@ func NewRevolver() []string {
 		model.BulletBlank,
 		model.BulletFatal,
 	}
-	rand.Shuffle(len(revolver), func(i, j int) {
+	CryptoShuffle(len(revolver), func(i, j int) {
 		revolver[i], revolver[j] = revolver[j], revolver[i]
 	})
 	return revolver

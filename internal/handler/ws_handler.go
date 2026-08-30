@@ -1,9 +1,12 @@
 package handler
 
 import (
+	cryptorand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -14,7 +17,23 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		// 校验同源 (Origin host 与 r.Host 一致) 或允许本地开发端口 (localhost / 127.0.0.1)
+		if strings.EqualFold(u.Host, r.Host) {
+			return true
+		}
+		hostName := u.Hostname()
+		if hostName == "localhost" || hostName == "127.0.0.1" {
+			return true
+		}
+		return false
 	},
 }
 
@@ -26,6 +45,11 @@ func NewWSHandler(hub *room.Hub) *WSHandler {
 	return &WSHandler{Hub: hub}
 }
 
+func secureRandomString(prefix string) string {
+	n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(9000000000000000))
+	return fmt.Sprintf("%s%d", prefix, n.Int64()+1000000000000000)
+}
+
 func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	action := c.QueryParam("action")
 	code := c.QueryParam("code")
@@ -33,7 +57,8 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	token := c.QueryParam("token")
 
 	if nickname == "" {
-		nickname = fmt.Sprintf("Player%d", rand.Intn(900)+100)
+		n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(900))
+		nickname = fmt.Sprintf("Player%d", n.Int64()+100)
 	}
 
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
@@ -41,7 +66,10 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return err
 	}
 
-	clientID := fmt.Sprintf("%d", rand.Int63())
+	clientID := secureRandomString("")
+	if action == "reconnect" && token != "" {
+		clientID = token
+	}
 
 	if action == "create" {
 		r := h.Hub.CreateRoom()
@@ -126,35 +154,20 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 			IsSpectator: false,
 			ClientRef:   client,
 		})
-		r.Game.Log(nickname + " 加入了房间 / " + nickname + " joined the room")
-	} else if isSpectator {
+		r.Game.Log(fmt.Sprintf("👋 %s 加入了房间 / 👋 %s joined room", nickname, nickname))
+	} else {
+		// 作为观战者加入
 		r.Game.State.Players = append(r.Game.State.Players, &model.Player{
 			ID:          client.ID,
 			Nickname:    nickname,
 			Hand:        []model.Card{},
-			Revolver:    []string{},
 			Bullets:     0,
-			IsAlive:     true,
+			IsAlive:     false,
 			IsHost:      false,
 			IsSpectator: true,
 			ClientRef:   client,
 		})
-		r.Game.Log(fmt.Sprintf("👀 %s 以观众身份加入 / 👀 %s is spectating", nickname, nickname))
-	} else if !isSpectator && r.Game.State.Status == model.StatusWaiting {
-		r.Game.Log(fmt.Sprintf("⚠️ %s 尝试加入但房间已满 / ⚠️ %s tried to join but room is full", nickname, nickname))
-	} else if !isSpectator {
-		r.Game.Log(fmt.Sprintf("👋 %s 尝试加入进行中的游戏，转为观战 / 👋 %s joined as spectator (game in progress)", nickname, nickname))
-		r.Game.State.Players = append(r.Game.State.Players, &model.Player{
-			ID:          client.ID,
-			Nickname:    nickname,
-			Hand:        []model.Card{},
-			Revolver:    []string{},
-			Bullets:     0,
-			IsAlive:     true,
-			IsHost:      false,
-			IsSpectator: true,
-			ClientRef:   client,
-		})
+		r.Game.Log(fmt.Sprintf("👀 %s 正在观战 / 👀 %s is spectating", nickname, nickname))
 	}
 	r.Game.Unlock()
 

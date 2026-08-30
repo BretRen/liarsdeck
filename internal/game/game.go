@@ -1,8 +1,9 @@
 package game
 
 import (
+	cryptorand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"sync"
 	"time"
 
@@ -125,7 +126,7 @@ func (g *Game) StartRound() {
 		}
 	}
 
-	rand.Shuffle(len(alive), func(i, j int) {
+	CryptoShuffle(len(alive), func(i, j int) {
 		alive[i], alive[j] = alive[j], alive[i]
 	})
 	g.State.Players = append(alive, others...)
@@ -161,8 +162,13 @@ func (g *Game) StartRound() {
 	g.State.LastPlayedCnt = 0
 	g.State.LastPlayer = -1
 
-	if g.State.CurrentTurn == -1 {
-		g.State.CurrentTurn = rand.Intn(len(g.State.Players))
+	if g.State.CurrentTurn == -1 && len(g.State.Players) > 0 {
+		nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(g.State.Players))))
+		if err == nil {
+			g.State.CurrentTurn = int(nBig.Int64())
+		} else {
+			g.State.CurrentTurn = 0
+		}
 	}
 	g.AdvanceToAlive()
 	g.ResetTimer()

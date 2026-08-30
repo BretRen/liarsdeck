@@ -22,9 +22,6 @@ type AdminHandler struct {
 
 func NewAdminHandler(hub *room.Hub, port string) *AdminHandler {
 	secret := os.Getenv("ADMIN_SECRET")
-	if secret == "" {
-		secret = "liarsbar2026"
-	}
 	return &AdminHandler{
 		Hub:     hub,
 		Secret:  secret,
@@ -38,6 +35,9 @@ type AdminAuthPayload struct {
 }
 
 func (h *AdminHandler) checkAuth(c echo.Context) (bool, error) {
+	if h.Secret == "" {
+		return false, echo.NewHTTPError(http.StatusForbidden, "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用 / Admin API is disabled: ADMIN_SECRET environment variable is not set")
+	}
 	var req AdminAuthPayload
 	if err := c.Bind(&req); err != nil {
 		return false, err
@@ -46,6 +46,9 @@ func (h *AdminHandler) checkAuth(c echo.Context) (bool, error) {
 }
 
 func (h *AdminHandler) Auth(c echo.Context) error {
+	if h.Secret == "" {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用 / Admin API disabled: ADMIN_SECRET is not set"})
+	}
 	ok, err := h.checkAuth(c)
 	if err != nil || !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})

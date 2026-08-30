@@ -16,13 +16,13 @@ const dict = {
     spectate_btn: '进入观战',
     back: '返回',
     rules_btn: '规则说明',
-
+    
     // Status
     status_waiting: '等待其他人加入中',
     status_playing: '对局进行中',
     status_paused: '对局暂停中',
     status_game_over: '游戏结束',
-
+    
     // Seat
     host_tag: '房主',
     spec_tag: '旁观',
@@ -37,7 +37,7 @@ const dict = {
     ready_status: '已就绪',
     unready_status: '未准备',
     kick_btn: '踢出房间',
-
+    
     // Header
     invite_btn: '复制邀请链接',
     copied_toast: '邀请链接已复制到剪贴板',
@@ -45,7 +45,7 @@ const dict = {
     audio_off: '已静音',
     timeout_warn: '操作倒计时',
     pause_warn: '重连倒计时',
-
+    
     // Table
     table_card_label: '本轮真牌',
     wild_card_tip: '2 为万能牌，可作为任何真牌打出',
@@ -56,16 +56,16 @@ const dict = {
     start_game_btn: '开始对局',
     need_more_players: '需至少 2 名已准备玩家',
     all_ready_needed: '等待所有玩家准备',
-
+    
     // Hand
     my_hand_title: '我的手牌',
     selected_count: '已选',
     max_cards_tip: '可选 1~3 张',
-
+    
     // Actions
     play_cards_btn: '出牌',
     call_liar_btn: '质疑 (CALL LIAR)',
-
+    
     // Events
     event_liar_alert: '发起质疑！',
     event_calls_out: '怀疑',
@@ -75,10 +75,10 @@ const dict = {
     event_bang_sub: '击中实弹，遗憾淘汰出局',
     event_click_title: '空包弹！',
     event_click_sub: '扣动扳机为纯空枪，逃过一劫',
-
+    
     // Spectator
     spectator_banner: '你正在旁观本场对局',
-
+    
     // Rules Modal
     rules_title: '游戏规则与牌理',
     rule_goal_title: '对局目标',
@@ -97,7 +97,7 @@ const dict = {
     rule_gun_1: '每位玩家持有一把 6 发弹仓手枪（5 发空包弹，1 发致命实弹，随机装填）。',
     rule_gun_2: '局中玩家首次断线将暂停游戏 30 秒等待其重连；若超时未归或二次断线，将直接被判定出局！',
     rule_got_it: '我已了解',
-
+    
     // Disconnect & Pause Modals
     dc_title: '网络连接已中断',
     dc_desc: '与酒馆牌桌的连接已断开，正在尝试自动重新连接...',
@@ -106,32 +106,32 @@ const dict = {
     dc_exit_btn: '退出到大厅',
     dc_success: '重新连接成功！',
     dc_grace_tip: '你有 30 秒时间重新连接，超时将被判定直接淘汰（每人仅限 1 次机会）。',
-
+    
     pause_modal_title: '对局已暂停',
     pause_modal_desc: '玩家【{name}】断线，等待其重新连接中...',
     pause_countdown_label: '重连剩余时间',
     pause_tip: '30 秒内重连将恢复对局；若超时仍未归来，系统将直接处死该玩家。',
-
+    
     // Admin Modal
     admin_title: '管理控制台',
     admin_auth_title: '管理员身份验证 (Ctrl + X)',
     admin_auth_desc: '请输入管理员密钥以解锁服务端维护与热更新操作：',
-    admin_auth_ph: '输入管理密钥 (默认: liarsbar2026)',
+    admin_auth_ph: '输入 ADMIN_SECRET 管理密钥',
     admin_unlock_btn: '解锁管理面板',
     admin_version_card: '系统版本与 GitHub Releases 维护',
     admin_curr_version: '当前版本',
     admin_latest_version: '最新版本',
     admin_check_btn: '检查 GitHub Releases 更新',
-    admin_update_btn: '更新并重启服务端',
+    admin_update_btn: '🚀 一键更新并热重启服务端',
     admin_updating: '正在拉起 update.go 后台程序...',
     admin_stats_card: '实时运行状态',
     admin_active_rooms: '当前活跃房间',
     admin_active_players: '在线玩家总数',
     admin_close_btn: '关闭控制台',
-
+    
     // Logs
     battle_log_title: '对局动态',
-
+    
     // Errors
     err_enter_nickname: '请填写玩家昵称',
     err_enter_code: '请输入6位房间码',
@@ -152,13 +152,13 @@ const dict = {
     spectate_btn: 'Spectate',
     back: 'Back',
     rules_btn: 'House Rules',
-
+    
     // Status
     status_waiting: 'Waiting for Players',
     status_playing: 'Hand in Progress',
     status_paused: 'Match Paused',
     status_game_over: 'Showdown Over',
-
+    
     // Seat
     host_tag: 'Host',
     spec_tag: 'Spectator',
@@ -173,7 +173,7 @@ const dict = {
     ready_status: 'Ready',
     unready_status: 'Not Ready',
     kick_btn: 'Kick',
-
+    
     // Header
     invite_btn: 'Copy Invite',
     copied_toast: 'Invite link copied',
@@ -181,7 +181,7 @@ const dict = {
     audio_off: 'Muted',
     timeout_warn: 'Turn Timer',
     pause_warn: 'Pause Timer',
-
+    
     // Table
     table_card_label: 'Table Card',
     wild_card_tip: 'Card 2 is Wild and counts as the Table Card',
@@ -192,16 +192,16 @@ const dict = {
     start_game_btn: 'Deal Cards',
     need_more_players: 'Requires 2+ ready players',
     all_ready_needed: 'Waiting for ready status',
-
+    
     // Hand
     my_hand_title: 'Your Hand',
     selected_count: 'Selected',
     max_cards_tip: 'Pick 1 to 3 cards',
-
+    
     // Actions
     play_cards_btn: 'Play Face-Down',
     call_liar_btn: 'CALL LIAR',
-
+    
     // Events
     event_liar_alert: 'CALLING LIAR!',
     event_calls_out: 'challenges',
@@ -211,10 +211,10 @@ const dict = {
     event_bang_sub: 'Hit live round and eliminated!',
     event_click_title: 'BLANK!',
     event_click_sub: 'Dry fire! Lucky escape!',
-
+    
     // Spectator
     spectator_banner: 'You are currently observing the table',
-
+    
     // Rules Modal
     rules_title: 'Tavern Rules & Mechanics',
     rule_goal_title: 'The Objective',
@@ -233,7 +233,7 @@ const dict = {
     rule_gun_1: 'Every player holds a 6-chamber cylinder with 1 fatal live round.',
     rule_gun_2: 'First disconnect pauses the game for 30s. If the player fails to reconnect or disconnects again, they are eliminated!',
     rule_got_it: 'Understood',
-
+    
     // Disconnect & Pause Modals
     dc_title: 'Connection Interrupted',
     dc_desc: 'Connection to the table was lost. Attempting to reconnect automatically...',
@@ -242,17 +242,17 @@ const dict = {
     dc_exit_btn: 'Exit to Lobby',
     dc_success: 'Reconnected successfully!',
     dc_grace_tip: 'You have 30 seconds to reconnect before elimination (1-time chance only).',
-
+    
     pause_modal_title: 'Match Paused',
     pause_modal_desc: 'Player [{name}] disconnected. Waiting for reconnection...',
     pause_countdown_label: 'Grace Time Remaining',
     pause_tip: 'Match will resume if reconnected in 30s. Player will be eliminated upon timeout.',
-
+    
     // Admin Modal
     admin_title: 'Admin Console',
     admin_auth_title: 'Admin Authentication (Ctrl + X)',
     admin_auth_desc: 'Enter your admin secret key to unlock server maintenance & hot updates:',
-    admin_auth_ph: 'Enter secret key (Default: liarsbar2026)',
+    admin_auth_ph: 'Enter ADMIN_SECRET',
     admin_unlock_btn: 'Unlock Console',
     admin_version_card: 'Version & GitHub Releases Maintenance',
     admin_curr_version: 'Current Version',
@@ -264,10 +264,10 @@ const dict = {
     admin_active_rooms: 'Active Rooms',
     admin_active_players: 'Online Players',
     admin_close_btn: 'Close Console',
-
+    
     // Logs
     battle_log_title: 'Action Log',
-
+    
     // Errors
     err_enter_nickname: 'Please enter a name',
     err_enter_code: 'Please enter a 6-digit code',
@@ -275,15 +275,16 @@ const dict = {
   }
 };
 
+// 全局单例语言响应式状态，确保全站组件双向同步切换
+const currentLang = ref(localStorage.getItem('liarsdeck_lang') || 'zh');
+
+watchEffect(() => {
+  localStorage.setItem('liarsdeck_lang', currentLang.value);
+});
+
 export function useI18n() {
-  const lang = ref(localStorage.getItem('liarsdeck_lang') || 'zh');
-
-  watchEffect(() => {
-    localStorage.setItem('liarsdeck_lang', lang.value);
-  });
-
   function t(key, params = {}) {
-    let str = (dict[lang.value] || dict.zh)[key] || key;
+    let str = (dict[currentLang.value] || dict.zh)[key] || key;
     for (const [k, v] of Object.entries(params)) {
       str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
     }
@@ -291,8 +292,8 @@ export function useI18n() {
   }
 
   function toggleLang() {
-    lang.value = lang.value === 'zh' ? 'en' : 'en';
+    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
   }
 
-  return { lang, t, toggleLang };
+  return { lang: currentLang, t, toggleLang };
 }
