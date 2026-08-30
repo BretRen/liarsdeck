@@ -30,7 +30,7 @@ type ReleaseInfo struct {
 	Assets  []ReleaseAsset `json:"assets"`
 }
 
-// PerformSelfUpdate 执行纯 Go 原生无依赖的后台自更新与进程热替换
+// PerformSelfUpdate 执行跨平台（Linux & Windows）安全热替换与无缝重启
 func PerformSelfUpdate(repo string, port string) error {
 	log.Printf("🚀 [Updater] 启动后台自更新流程 (目标仓库: %s, 平台: %s/%s)...", repo, runtime.GOOS, runtime.GOARCH)
 
@@ -98,14 +98,14 @@ func PerformSelfUpdate(repo string, port string) error {
 		return fmt.Errorf("解压内容中未找到二进制可执行文件: %s", binaryName)
 	}
 
-	// 5. 备份旧二进制 (通过重命名支持 Windows/Linux 在运行状态下覆盖)
+	// 5. 备份旧二进制 (通过重命名机制：Linux & Windows 均支持在运行状态下将文件改名挪位)
 	oldBackupPath := execPath + ".old." + strconv.FormatInt(time.Now().Unix(), 10)
-	log.Printf("📂 [Updater] 备份旧二进制文件至: %s", oldBackupPath)
+	log.Printf("📂 [Updater] 正在将当前运行程序重命名让位至: %s", oldBackupPath)
 	if err := os.Rename(execPath, oldBackupPath); err != nil {
 		log.Printf("⚠️ [Updater] 重命名旧文件失败 (尝试直接覆盖): %v", err)
 	}
 
-	// 拷贝新二进制文件
+	// 写入新版本二进制文件
 	_ = os.Chmod(srcBinary, 0755)
 	if err := CopyFile(srcBinary, execPath); err != nil {
 		// 回滚
@@ -130,9 +130,9 @@ func PerformSelfUpdate(repo string, port string) error {
 		log.Printf("✅ [Updater] 前端静态资源 public/ 已同步替换")
 	}
 
-	// 6. 启动新版本子进程
+	// 6. 启动新版本子进程（传入 --wait-pid 确保旧进程退出并释放端口后再绑定）
 	log.Printf("🚀 [Updater] 正在启动新版本服务进程: %s ...", execPath)
-	cmd := exec.Command(execPath)
+	cmd := exec.Command(execPath, fmt.Sprintf("--wait-pid=%d", os.Getpid()))
 	cmd.Dir = cwd
 	cmd.Env = os.Environ()
 	cmd.Stdout = os.Stdout
@@ -145,33 +145,8 @@ func PerformSelfUpdate(repo string, port string) error {
 	}
 
 	newPID := cmd.Process.Pid
-	log.Printf("✨ [Updater] 新版服务已启动 (PID: %d)", newPID)
-
-	// 7. 健康检查
-	healthURL := fmt.Sprintf("http://127.0.0.1:%s/", port)
-	healthy := false
-	for i := 0; i < 15; i++ {
-		time.Sleep(800 * time.Millisecond)
-		resp, err := http.Get(healthURL)
-		if err == nil && resp.StatusCode == 200 {
-			_ = resp.Body.Close()
-			healthy = true
-			break
-		}
-		if resp != nil {
-			_ = resp.Body.Close()
-		}
-	}
-
-	if healthy {
-		log.Printf("🎉 [Updater] 健康检查通过！新版本 (%s) 运行正常，旧进程即将优雅退出", release.TagName)
-		time.Sleep(1 * time.Second)
-		os.Exit(0)
-		return nil
-	}
-
-	log.Printf("⚠️ [Updater] 新版本健康检查未在预期时间内响应，但新进程已启动 (PID: %d)", newPID)
-	time.Sleep(2 * time.Second)
+	log.Printf("✨ [Updater] 新版服务已拉起 (PID: %d)，旧进程即将退出以释放端口 :%s ...", newPID, port)
+	time.Sleep(500 * time.Millisecond)
 	os.Exit(0)
 	return nil
 }

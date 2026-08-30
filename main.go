@@ -1,7 +1,10 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"net"
 	"os"
 	"time"
 
@@ -12,9 +15,27 @@ import (
 )
 
 func main() {
+	waitPID := flag.Int("wait-pid", 0, "等待旧服务进程退出并释放端口后再绑定")
+	flag.Parse()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8095"
+	}
+
+	// 如果传入了 --wait-pid，说明是由旧版本自更新拉起的新版本，等待旧进程释放端口
+	if *waitPID > 0 {
+		log.Printf("⏳ [AutoRestart] 正在等待旧服务进程 (PID: %d) 退出并释放端口 :%s...", *waitPID, port)
+		for i := 0; i < 50; i++ {
+			time.Sleep(100 * time.Millisecond)
+			l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+			if err == nil {
+				_ = l.Close()
+				break
+			}
+		}
+		time.Sleep(200 * time.Millisecond)
+		log.Printf("✅ [AutoRestart] 端口 :%s 已就绪，新版本服务开始监听！", port)
 	}
 
 	hub := room.NewHub()
