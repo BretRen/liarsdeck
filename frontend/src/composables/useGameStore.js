@@ -379,7 +379,7 @@ export function useGameStore() {
   function playCards() {
     if (!canPlay.value) return;
     const cards = selectedIndexes.value.map((i) => myHand.value[i]);
-    sendAction('play', { cards });
+    sendAction('play_cards', { cards });
     clearSelection();
   }
 

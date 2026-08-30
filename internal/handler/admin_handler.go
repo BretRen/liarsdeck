@@ -13,7 +13,7 @@ import (
 )
 
 // Version 服务端运行版本号，支持在编译时通过 -ldflags "-X 'pdnode.com/play/liarsbar-web/internal/handler.Version=v...'" 动态注入
-var Version = "v2.0.1"
+var Version = "v2.0.5"
 
 type AdminHandler struct {
 	Hub    *room.Hub

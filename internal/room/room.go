@@ -35,14 +35,8 @@ func (r *Room) AddClient(client *Client) {
 
 func (r *Room) Broadcast() {
 	r.Game.Lock()
-	safePlayers := make([]model.SafePlayer, len(r.Game.State.Players))
-	for i, p := range r.Game.State.Players {
-		safePlayers[i] = p.ToSafe()
-	}
-
-	state := map[string]any{
+	stateBase := map[string]any{
 		"status":                 r.Game.State.Status,
-		"players":                safePlayers,
 		"current_turn":           r.Game.State.CurrentTurn,
 		"table_card":             r.Game.State.TableCard,
 		"last_player":            r.Game.State.LastPlayer,
@@ -55,19 +49,32 @@ func (r *Room) Broadcast() {
 		"winner":                 r.Game.State.Winner,
 		"room_code":              r.Game.State.RoomCode,
 	}
+	rawPlayers := make([]*model.Player, len(r.Game.State.Players))
+	copy(rawPlayers, r.Game.State.Players)
 	r.Game.Unlock()
-
-	payload, err := json.Marshal(map[string]any{
-		"type": "game_state",
-		"data": state,
-	})
-	if err != nil {
-		return
-	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for client := range r.Clients {
+		safePlayers := make([]model.SafePlayer, len(rawPlayers))
+		for i, p := range rawPlayers {
+			safePlayers[i] = p.ToSafe(client.ID)
+		}
+
+		state := make(map[string]any, len(stateBase)+1)
+		for k, v := range stateBase {
+			state[k] = v
+		}
+		state["players"] = safePlayers
+
+		payload, err := json.Marshal(map[string]any{
+			"type": "game_state",
+			"data": state,
+		})
+		if err != nil {
+			continue
+		}
+
 		select {
 		case client.Send <- payload:
 		default:
@@ -175,39 +182,43 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 
 	switch msg.Action {
 	case "ready":
-		for _, p := range g.State.Players {
-			if p.ID == c.ID {
-				p.IsReady = !p.IsReady
-				status := "未准备"
-				en := "is not ready"
-				if p.IsReady {
-					status = "已准备"
-					en = "is ready"
+		if g.State.Status == model.StatusWaiting {
+			for _, p := range g.State.Players {
+				if p.ID == c.ID && !p.IsSpectator {
+					p.IsReady = !p.IsReady
+					status := "未准备"
+					en := "is not ready"
+					if p.IsReady {
+						status = "已准备"
+						en = "is ready"
+					}
+					g.Log(fmt.Sprintf("✅ %s %s / ✅ %s %s", p.Nickname, status, p.Nickname, en))
+					break
 				}
-				g.Log(fmt.Sprintf("✅ %s %s / ✅ %s %s", p.Nickname, status, p.Nickname, en))
-				break
 			}
 		}
 
 	case "remove_player":
-		var req model.RemovePlayerPayload
-		_ = json.Unmarshal(msg.Payload, &req)
+		if g.State.Status == model.StatusWaiting || g.State.Status == model.StatusGameOver {
+			var req model.RemovePlayerPayload
+			_ = json.Unmarshal(msg.Payload, &req)
 
-		callerIsHost := false
-		for _, p := range g.State.Players {
-			if p.ID == c.ID && p.IsHost {
-				callerIsHost = true
-				break
-			}
-		}
-		if callerIsHost {
+			callerIsHost := false
 			for _, p := range g.State.Players {
-				if p.ID == req.TargetID && p.ClientRef != nil {
-					g.Log(fmt.Sprintf("👢 %s 被房主移出房间 / 👢 %s was removed by host", p.Nickname, p.Nickname))
-					if targetClient, ok := p.ClientRef.(*Client); ok && targetClient != nil {
-						targetClient.Close()
-					}
+				if p.ID == c.ID && p.IsHost {
+					callerIsHost = true
 					break
+				}
+			}
+			if callerIsHost {
+				for _, p := range g.State.Players {
+					if p.ID == req.TargetID && p.ClientRef != nil {
+						g.Log(fmt.Sprintf("👢 %s 被房主移出房间 / 👢 %s was removed by host", p.Nickname, p.Nickname))
+						if targetClient, ok := p.ClientRef.(*Client); ok && targetClient != nil {
+							targetClient.Close()
+						}
+						break
+					}
 				}
 			}
 		}
@@ -259,10 +270,10 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 			}
 		}
 
-	case "play_cards":
+	case "play", "play_cards":
 		if g.State.Status == model.StatusPlaying && len(g.State.Players) > g.State.CurrentTurn && g.State.CurrentTurn >= 0 {
 			currPlayer := g.State.Players[g.State.CurrentTurn]
-			if currPlayer.ID == c.ID {
+			if currPlayer.ID == c.ID && currPlayer.IsAlive && !currPlayer.IsSpectator {
 				var req model.PlayCardsPayload
 				_ = json.Unmarshal(msg.Payload, &req)
 				_ = g.PlayCards(g.State.CurrentTurn, req.Cards)
@@ -272,7 +283,7 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 	case "call_liar":
 		if g.State.Status == model.StatusPlaying && len(g.State.Players) > g.State.CurrentTurn && g.State.CurrentTurn >= 0 {
 			currPlayer := g.State.Players[g.State.CurrentTurn]
-			if currPlayer.ID == c.ID && g.State.LastPlayer != -1 && g.State.LastPlayer != g.State.CurrentTurn {
+			if currPlayer.ID == c.ID && currPlayer.IsAlive && !currPlayer.IsSpectator && g.State.LastPlayer != -1 && g.State.LastPlayer != g.State.CurrentTurn {
 				g.CallLiar(
 					g.State.CurrentTurn,
 					g.State.LastPlayer,
@@ -386,8 +397,11 @@ func (r *Room) Watchdog() {
 					)
 				}
 			}
+			r.Game.Unlock()
+			r.Broadcast()
+			continue
 		}
+
 		r.Game.Unlock()
-		r.Broadcast()
 	}
 }

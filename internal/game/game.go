@@ -220,7 +220,19 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 	if playerIdx < 0 || playerIdx >= len(g.State.Players) {
 		return false
 	}
+
+	// 如果上家手牌已经出空，下家必须发起质疑，禁止继续出牌
+	if g.State.LastPlayer >= 0 && g.State.LastPlayer < len(g.State.Players) {
+		lastP := g.State.Players[g.State.LastPlayer]
+		if len(lastP.Hand) == 0 {
+			return false
+		}
+	}
+
 	p := g.State.Players[playerIdx]
+	if !p.IsAlive || p.IsSpectator {
+		return false
+	}
 
 	newHand := make([]model.Card, 0, len(p.Hand))
 	used := make([]bool, len(cards))
@@ -265,7 +277,8 @@ func (g *Game) CallLiar(
 	onShot func(target string, fatal bool),
 ) {
 	if callerIdx < 0 || callerIdx >= len(g.State.Players) ||
-		accusedIdx < 0 || accusedIdx >= len(g.State.Players) {
+		accusedIdx < 0 || accusedIdx >= len(g.State.Players) ||
+		callerIdx == accusedIdx || len(g.HiddenCards) == 0 {
 		return
 	}
 

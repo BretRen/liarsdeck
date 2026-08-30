@@ -289,8 +289,17 @@ func Unzip(src, dest string) error {
 	}
 	defer r.Close()
 
+	destClean := filepath.Clean(dest) + string(os.PathSeparator)
+
 	for _, f := range r.File {
 		fpath := filepath.Join(dest, f.Name)
+		cleanPath := filepath.Clean(fpath)
+
+		// 防止 ZipSlip 路径穿越安全漏洞
+		if !strings.HasPrefix(cleanPath+string(os.PathSeparator), destClean) && cleanPath != filepath.Clean(dest) {
+			return fmt.Errorf("非法压缩包文件路径: %s", f.Name)
+		}
+
 		if f.FileInfo().IsDir() {
 			_ = os.MkdirAll(fpath, os.ModePerm)
 			continue
@@ -331,6 +340,8 @@ func Untar(src, dest string) error {
 	}
 	defer gzr.Close()
 
+	destClean := filepath.Clean(dest) + string(os.PathSeparator)
+
 	tr := tar.NewReader(gzr)
 	for {
 		header, err := tr.Next()
@@ -342,6 +353,13 @@ func Untar(src, dest string) error {
 		}
 
 		target := filepath.Join(dest, header.Name)
+		cleanTarget := filepath.Clean(target)
+
+		// 防止 ZipSlip 路径穿越安全漏洞
+		if !strings.HasPrefix(cleanTarget+string(os.PathSeparator), destClean) && cleanTarget != filepath.Clean(dest) {
+			return fmt.Errorf("非法 tar 文件路径: %s", header.Name)
+		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			_ = os.MkdirAll(target, 0755)

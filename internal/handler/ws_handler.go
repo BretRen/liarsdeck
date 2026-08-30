@@ -52,9 +52,18 @@ func secureRandomString(prefix string) string {
 
 func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	action := c.QueryParam("action")
-	code := c.QueryParam("code")
-	nickname := c.QueryParam("name")
-	token := c.QueryParam("token")
+	code := strings.ToUpper(strings.TrimSpace(c.QueryParam("code")))
+	nickname := strings.TrimSpace(c.QueryParam("name"))
+	token := strings.TrimSpace(c.QueryParam("token"))
+
+	// 昵称安全过滤与长度限制 (最多 16 个字符)
+	nickname = strings.ReplaceAll(nickname, "\n", "")
+	nickname = strings.ReplaceAll(nickname, "\r", "")
+	nickname = strings.ReplaceAll(nickname, "\t", "")
+	runeNick := []rune(nickname)
+	if len(runeNick) > 16 {
+		nickname = string(runeNick[:16])
+	}
 
 	if nickname == "" {
 		n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(900))
@@ -105,9 +114,6 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return nil
 	}
 
-	client := room.NewClient(clientID, nickname, r, conn)
-	r.AddClient(client)
-
 	r.Game.Lock()
 	isSpectator := action == "spectate"
 
@@ -115,6 +121,8 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	if action == "reconnect" {
 		for _, p := range r.Game.State.Players {
 			if p.ID == token && p.ClientRef == nil {
+				client := room.NewClient(clientID, nickname, r, conn)
+				r.AddClient(client)
 				p.ClientRef = client
 				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
 					r.Game.ResumeGame(p)
@@ -133,6 +141,9 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		_ = conn.Close()
 		return nil
 	}
+
+	client := room.NewClient(clientID, nickname, r, conn)
+	r.AddClient(client)
 
 	// 统计非观战玩家数
 	playerCount := 0
