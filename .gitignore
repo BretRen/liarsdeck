@@ -1,1 +1,9 @@
 liarsbar-web*
+server.exe
+*.exe
+node_modules/
+.pnpm-store/
+frontend/dist/
+frontend/node_modules/
+.DS_Store
+*.log
