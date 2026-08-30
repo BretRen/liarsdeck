@@ -155,11 +155,9 @@ func TestCallLiarEmptyHandHonestVictory(t *testing.T) {
 		t.Fatalf("expected blank shot for Bob")
 	}
 
-	if g.State.Status != model.StatusGameOver {
-		t.Fatalf("expected game_over on empty hand honest win, got %s", g.State.Status)
-	}
-	if g.State.Winner != "Alice" {
-		t.Fatalf("expected Alice to win, got %s", g.State.Winner)
+	// Bob 抽中空包弹存活，故全场依然有 2 名存活玩家，游戏重新洗牌进入下一轮 (StatusPlaying)
+	if g.State.Status != model.StatusPlaying {
+		t.Fatalf("expected status playing (new round) when multiple survivors remain, got %s", g.State.Status)
 	}
 }
 

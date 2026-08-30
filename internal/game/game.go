@@ -158,6 +158,7 @@ func (g *Game) StartRound() {
 		return
 	}
 
+	g.State.Status = model.StatusPlaying
 	g.HiddenCards = []model.Card{}
 	g.State.LastPlayedCnt = 0
 	g.State.LastPlayer = -1
@@ -298,15 +299,7 @@ func (g *Game) CallLiar(
 		// 1. 质疑者（诬告者）必须先开枪受罚！
 		g.ShootPlayer(callerIdx, onShot)
 
-		// 2. 枪击结算后，若出牌者清白且此时手牌为 0，则出牌者获胜！
-		if accused.IsAlive && len(accused.Hand) == 0 {
-			g.State.Status = model.StatusGameOver
-			g.State.Winner = accused.Nickname
-			g.Log(fmt.Sprintf("🎉 🏆 %s 成功出完手牌且未说谎，获得游戏胜利！ / 🎉 🏆 %s emptied all cards honestly and wins!", accused.Nickname, accused.Nickname))
-			return
-		}
-
-		// 3. 否则检查剩余存活人数或开启新一轮
+		// 2. 检查剩余存活人数
 		g.State.CurrentTurn = callerIdx
 		g.AdvanceToAlive()
 		if g.State.Status == model.StatusGameOver {
@@ -321,13 +314,20 @@ func (g *Game) CallLiar(
 				lastAlive = pp
 			}
 		}
+
+		// 唯一胜利条件：全场仅剩最后一名存活者
 		if aliveCount <= 1 && lastAlive != nil {
 			g.State.Status = model.StatusGameOver
 			g.State.Winner = lastAlive.Nickname
-			g.Log(fmt.Sprintf("🏆 %s 获胜！ / 🏆 %s wins!", lastAlive.Nickname, lastAlive.Nickname))
+			g.Log(fmt.Sprintf("🏆 %s 成为唯一存活者，获得整场胜利！ / 🏆 %s is the sole survivor and wins!", lastAlive.Nickname, lastAlive.Nickname))
 			return
 		}
 
+		if len(accused.Hand) == 0 {
+			g.Log(fmt.Sprintf("🎴 %s 成功出清全部手牌且诚实无欺！本轮结束，重新发牌！ / 🎴 %s emptied all cards honestly! Dealing new round!", accused.Nickname, accused.Nickname))
+		}
+
+		// 存活人数 > 1，重新洗牌发牌开启新一轮
 		g.StartRound()
 	}
 }

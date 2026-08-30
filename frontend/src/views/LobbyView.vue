@@ -120,6 +120,17 @@ const mode = ref('create'); // 'create' | 'join' | 'spectate'
 onMounted(() => {
   const params = new URLSearchParams(window.location.search);
   const room = params.get('room');
+  const saved = store.getSavedSession();
+
+  if (saved) {
+    nicknameInput.value = saved.nickname;
+    if (!room || saved.roomCode === room.toUpperCase()) {
+      roomCodeInput.value = saved.roomCode;
+      store.connect('reconnect', saved.roomCode, saved.nickname, saved.token);
+      return;
+    }
+  }
+
   if (room) {
     roomCodeInput.value = room.toUpperCase();
     mode.value = 'join';
@@ -137,6 +148,7 @@ function onCreateRoom() {
     store.showToast(t('err_enter_nickname'));
     return;
   }
+  store.clearSession();
   store.connect('create', '', nicknameInput.value.trim());
 }
 
@@ -149,7 +161,14 @@ function onJoinRoom() {
     store.showToast(t('err_enter_code'));
     return;
   }
-  store.connect('join', roomCodeInput.value.trim().toUpperCase(), nicknameInput.value.trim());
+  const code = roomCodeInput.value.trim().toUpperCase();
+  const name = nicknameInput.value.trim();
+  const saved = store.getSavedSession();
+  if (saved && saved.roomCode === code && saved.nickname === name) {
+    store.connect('reconnect', code, name, saved.token);
+  } else {
+    store.connect('join', code, name);
+  }
 }
 
 function onSpectateRoom() {

@@ -43,6 +43,35 @@ const pendingState = ref(null);
 let toastTimer = null;
 let reconnectTimer = null;
 
+const SESSION_KEY = 'liarsdeck_active_session';
+
+function saveSession(roomCode, token, nickname) {
+  if (roomCode && token && nickname) {
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ roomCode, token, nickname, savedAt: Date.now() })
+    );
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function getSavedSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const sess = JSON.parse(raw);
+    if (sess && sess.roomCode && sess.token && sess.nickname) {
+      if (Date.now() - (sess.savedAt || 0) < 3600000) {
+        return sess;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 export function useGameStore() {
   const audio = useAudio();
 
@@ -167,15 +196,17 @@ export function useGameStore() {
   }
 
   // ── WebSocket Connect ──
-  function connect(action, roomCode, name) {
+  function connect(action, roomCode, name, token = '') {
     errorMsg.value = '';
     myNickname.value = name;
     if (roomCode) myRoomCode.value = roomCode;
+    if (token) myPlayerToken.value = token;
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const host = window.location.host;
     let url = `${proto}://${host}/ws?action=${action}&name=${encodeURIComponent(name)}`;
     if (roomCode) url += `&code=${encodeURIComponent(roomCode)}`;
+    if (token) url += `&token=${encodeURIComponent(token)}`;
 
     doConnect(url);
   }
@@ -264,6 +295,7 @@ export function useGameStore() {
         hasJoinedRoom.value = false;
         isDisconnected.value = false;
         isReconnecting.value = false;
+        clearSession();
         if (ws.value) {
           ws.value.close();
           ws.value = null;
@@ -281,7 +313,10 @@ export function useGameStore() {
 
         if (msg.data.players && myNickname.value) {
           const me = msg.data.players.find((p) => p.nickname === myNickname.value);
-          if (me && me.id) myPlayerToken.value = me.id;
+          if (me && me.id) {
+            myPlayerToken.value = me.id;
+            saveSession(msg.data.room_code || myRoomCode.value, me.id, myNickname.value);
+          }
         }
 
         if (msg.data.room_code) {
@@ -328,9 +363,12 @@ export function useGameStore() {
     const pos = selectedIndexes.value.indexOf(idx);
     if (pos > -1) {
       selectedIndexes.value.splice(pos, 1);
-    } else if (selectedIndexes.value.length < 3) {
+    } else {
+      if (selectedIndexes.value.length >= 3) {
+        showToast('每次最多只能选择 3 张暗牌');
+        return;
+      }
       selectedIndexes.value.push(idx);
-      audio.playCardSelect();
     }
   }
 
@@ -341,9 +379,8 @@ export function useGameStore() {
   function playCards() {
     if (!canPlay.value) return;
     const cards = selectedIndexes.value.map((i) => myHand.value[i]);
-    sendAction('play_cards', { cards });
+    sendAction('play', { cards });
     clearSelection();
-    audio.playCardDeal();
   }
 
   function callLiar() {
@@ -379,6 +416,7 @@ export function useGameStore() {
   }
 
   function exitToLobby() {
+    clearSession();
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -441,5 +479,7 @@ export function useGameStore() {
     exitToLobby,
     disconnect,
     showToast,
+    getSavedSession,
+    clearSession,
   };
 }
