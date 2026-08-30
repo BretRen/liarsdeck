@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"pdnode.com/play/liarsbar-web/internal/room"
+	"pdnode.com/play/liarsbar-web/internal/updater"
 )
 
 // Version 服务端运行版本号，支持在编译时通过 -ldflags "-X 'pdnode.com/play/liarsbar-web/internal/handler.Version=v...'" 动态注入
@@ -123,28 +122,16 @@ func (h *AdminHandler) TriggerUpdate(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
 	}
 
-	pid := os.Getpid()
-	binaryName := "update"
-	if runtime.GOOS == "windows" {
-		binaryName = "update.exe"
-	}
-
-	// 如果当前目录有 update 二进制，则调用；若无则通过 go run ./cmd/update 调用
-	var cmd *exec.Cmd
-	if _, err := os.Stat(binaryName); err == nil {
-		cmd = exec.Command("./"+binaryName, fmt.Sprintf("--pid=%d", pid), fmt.Sprintf("--port=%s", h.Port))
-	} else {
-		cmd = exec.Command("go", "run", "./cmd/update", fmt.Sprintf("--pid=%d", pid), fmt.Sprintf("--port=%s", h.Port))
-	}
-
-	// 后台分离启动
-	if err := cmd.Start(); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "启动更新程序失败: " + err.Error()})
-	}
+	// 启动纯 Go 原生后台自更新流程，无需系统具备 go 编译器或外部工具
+	go func() {
+		if err := updater.PerformSelfUpdate("BretRen/liarsdeck", h.Port); err != nil {
+			fmt.Printf("❌ [Updater] 自更新执行失败: %v\n", err)
+		}
+	}()
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"status":  "started",
-		"message": "更新程序已在后台拉起，稍后将自动替换并重启服务！",
+		"message": "已在后台启动下载并热替换更新，预计 3~5 秒内自动重启完成！",
 	})
 }
 
