@@ -37,11 +37,14 @@ func (h *Hub) CreateRoom() *Room {
 		}
 	}
 
-	room := NewRoom(h, code)
+	room := NewRoom(code, h)
 	h.Rooms[code] = room
 	go room.Watchdog()
 	return room
 }
+
+func (h *Hub) Lock()   { h.mu.Lock() }
+func (h *Hub) Unlock() { h.mu.Unlock() }
 
 func (h *Hub) GetRoom(code string) (*Room, bool) {
 	h.mu.Lock()
@@ -57,3 +60,4 @@ func (h *Hub) RemoveRoom(code string) {
 
 	delete(h.Rooms, code)
 }
+

@@ -2,12 +2,11 @@
   <div v-if="logs && logs.length" class="log-panel glass-panel">
     <div class="log-header" @click="isOpen = !isOpen">
       <div class="log-title">
-        <span class="log-icon">📜</span>
         <span>{{ t('battle_log_title') }}</span>
         <span class="log-count">({{ logs.length }})</span>
       </div>
       <button class="btn-icon collapse-btn">
-        {{ isOpen ? '▼' : '▲' }}
+        {{ isOpen ? '▲' : '▼' }}
       </button>
     </div>
 
@@ -46,8 +45,8 @@ watch(
 
 <style scoped>
 .log-panel {
-  background: rgba(14, 17, 24, 0.85);
-  border: 1px solid var(--border-subtle);
+  background: #10131b;
+  border: 1px solid var(--border-brass);
   border-radius: var(--radius-md);
   overflow: hidden;
   margin-top: auto;
@@ -57,8 +56,8 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 12px;
+  background: #141822;
   cursor: pointer;
   user-select: none;
 }
@@ -67,9 +66,11 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .log-count {
@@ -77,29 +78,28 @@ watch(
 }
 
 .collapse-btn {
-  font-size: 10px;
-  padding: 4px;
+  font-size: 9px;
+  padding: 2px 6px;
   background: transparent;
   border: none;
 }
 
 .log-body {
-  padding: 8px 14px;
-  max-height: 120px;
+  padding: 6px 12px;
+  max-height: 100px;
   overflow-y: auto;
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 11.5px;
+  line-height: 1.5;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   border-top: 1px solid var(--border-subtle);
 }
 
 .log-entry {
   word-break: break-all;
-  transition: color 0.2s ease;
 }
 
 .log-entry:last-child {

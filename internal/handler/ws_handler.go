@@ -88,7 +88,11 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		for _, p := range r.Game.State.Players {
 			if p.ID == token && p.ClientRef == nil {
 				p.ClientRef = client
-				r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+					r.Game.ResumeGame(p)
+				} else {
+					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+				}
 				r.Game.Unlock()
 				go client.WritePump()
 				go client.ReadPump()

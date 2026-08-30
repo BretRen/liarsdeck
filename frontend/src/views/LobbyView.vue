@@ -3,7 +3,7 @@
     <!-- Top Bar Controls -->
     <div class="lobby-topbar">
       <button class="btn-icon" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
-        {{ audio.isMuted.value ? '🔇' : '🔊' }}
+        {{ audio.isMuted.value ? 'Muted' : 'Sound' }}
       </button>
       <button class="btn-icon lang-btn" @click="toggleLang">
         {{ lang.toUpperCase() }}
@@ -11,10 +11,7 @@
     </div>
 
     <div class="lobby-hero">
-      <div class="hero-badge">
-        <span>BLUFFING & SURVIVAL</span>
-      </div>
-      <h1 class="hero-title">🃏 Liar's Deck</h1>
+      <h1 class="hero-title font-serif">Liar's Deck</h1>
       <p class="hero-subtitle">{{ t('app_subtitle') }}</p>
     </div>
 
@@ -40,10 +37,10 @@
           </button>
           <div class="sub-actions">
             <button class="btn-secondary flex-1" @click="mode = 'join'">
-              🔑 {{ t('join_btn') }}
+              {{ t('join_btn') }}
             </button>
             <button class="btn-secondary flex-1" @click="mode = 'spectate'">
-              👀 {{ t('spectate_btn') }}
+              {{ t('spectate_btn') }}
             </button>
           </div>
         </div>
@@ -100,7 +97,7 @@
 
     <!-- Rulebook Link -->
     <button class="rules-link" @click="$emit('open-rules')">
-      📖 {{ t('rules_btn') }}
+      {{ t('rules_btn') }}
     </button>
   </div>
 </template>
@@ -190,51 +187,38 @@ function onSpectateRoom() {
 
 .lobby-hero {
   text-align: center;
-  margin-bottom: 28px;
-}
-
-.hero-badge {
-  display: inline-block;
-  font-family: var(--font-heading);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--accent-gold);
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid var(--border-gold);
-  padding: 3px 12px;
-  border-radius: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .hero-title {
-  font-size: 3.2rem;
+  font-size: 3rem;
   font-weight: 900;
-  color: #f3f4f6;
-  text-shadow: 0 0 30px rgba(245, 158, 11, 0.25);
-  margin-bottom: 6px;
-  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+  text-shadow: 0 0 24px var(--gold-glow);
+  margin-bottom: 4px;
 }
 
 .hero-subtitle {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
 }
 
 .lobby-card {
   width: 100%;
-  max-width: 420px;
-  padding: 32px 28px;
-  background: rgba(18, 21, 28, 0.95);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 158, 11, 0.05);
+  max-width: 390px;
+  padding: 28px 24px;
+  background: #141720;
+  border: 1px solid var(--border-brass);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   text-align: left;
 }
 
@@ -247,8 +231,8 @@ function onSpectateRoom() {
 
 .room-code-input {
   text-transform: uppercase;
-  letter-spacing: 4px;
-  font-family: var(--font-heading);
+  letter-spacing: 3px;
+  font-family: var(--font-serif);
   font-weight: 700;
   font-size: 1.1rem;
   text-align: center;
@@ -267,8 +251,8 @@ function onSpectateRoom() {
 
 .full-btn {
   width: 100%;
-  padding: 13px;
-  font-size: 15px;
+  padding: 12px;
+  font-size: 14px;
 }
 
 .flex-1 {
@@ -276,15 +260,16 @@ function onSpectateRoom() {
 }
 
 .rules-link {
-  margin-top: 24px;
+  margin-top: 20px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   border: none;
   cursor: pointer;
-  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .rules-link:hover {
-  color: var(--accent-gold);
+  color: var(--gold-accent);
 }
 </style>

@@ -1,12 +1,12 @@
 <template>
   <div v-if="currentStep" class="event-overlay" :class="currentStep">
-    <!-- Muzzle Flash overlay on fatal shot -->
+    <!-- Muzzle Flash on fatal shot -->
     <div v-if="currentStep === 'shot' && stepData.fatal" class="muzzle-flash"></div>
 
     <div class="event-card glass-panel" :class="{ shake: currentStep === 'shot' && stepData.fatal }">
       <!-- 1. Liar Call Step -->
       <template v-if="currentStep === 'liar_call'">
-        <div class="siren-icon pulse-liar">🚨</div>
+        <div class="event-badge pulse-liar">CHALLENGE</div>
         <h2 class="event-title">{{ t('event_liar_alert') }}</h2>
         <div class="call-details">
           <span class="highlight caller">{{ stepData.caller }}</span>
@@ -18,6 +18,7 @@
 
       <!-- 2. Reveal Cards Step -->
       <template v-if="currentStep === 'reveal'">
+        <div class="event-badge">VERIFICATION</div>
         <h2 class="event-title">{{ stepData.accused }} - {{ t('event_cards_revealed') }}</h2>
         <div class="revealed-cards-row">
           <div
@@ -25,7 +26,7 @@
             :key="i"
             class="playing-card reveal-card"
             :class="`rank-${card}`"
-            :style="{ animationDelay: `${i * 0.15}s` }"
+            :style="{ animationDelay: `${i * 0.12}s` }"
           >
             <span class="card-corner">{{ card }}</span>
             <span class="rank-main">{{ card }}</span>
@@ -37,8 +38,8 @@
 
       <!-- 3. Shot Step -->
       <template v-if="currentStep === 'shot'">
-        <div class="shot-icon">
-          {{ stepData.fatal ? '💥' : '💨' }}
+        <div class="event-badge" :class="{ 'badge-fatal': stepData.fatal, 'badge-blank': !stepData.fatal }">
+          {{ stepData.fatal ? 'FATAL ROUND' : 'DRY FIRE' }}
         </div>
         <h2 class="event-title" :class="{ fatal: stepData.fatal, blank: !stepData.fatal }">
           {{ stepData.fatal ? t('event_bang_title') : t('event_click_title') }}
@@ -72,67 +73,81 @@ const { t } = useI18n();
   align-items: center;
   justify-content: center;
   padding: 20px;
-  backdrop-filter: blur(12px);
-  animation: fadeIn 0.25s ease;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease;
 }
 
 .event-overlay.liar_call {
-  background: rgba(185, 28, 28, 0.25);
+  background: rgba(43, 10, 10, 0.7);
 }
 
 .event-overlay.reveal {
-  background: rgba(10, 11, 14, 0.75);
+  background: rgba(13, 15, 20, 0.8);
 }
 
 .event-overlay.shot {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(5, 6, 8, 0.85);
 }
 
 .event-card {
   width: 100%;
-  max-width: 480px;
-  padding: 32px 24px;
-  background: #141722;
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-xl);
+  max-width: 440px;
+  padding: 28px 24px;
+  background: #141720;
+  border: 1px solid var(--border-brass);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.5);
+  gap: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
 }
 
-.siren-icon {
-  font-size: 54px;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.15);
+.event-badge {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: #2b1414;
+  border: 1px solid #742a2a;
+  color: #ff8787;
+}
+
+.badge-fatal {
+  background: #3b1010;
+  border-color: #e03131;
+  color: #ffffff;
+}
+
+.badge-blank {
+  background: rgba(43, 138, 62, 0.25);
+  border-color: #2b8a3e;
+  color: #51cf66;
 }
 
 .event-title {
-  font-family: var(--font-heading);
-  font-size: 1.5rem;
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
   font-weight: 900;
   color: var(--text-primary);
+  margin: 0;
 }
 
 .event-title.fatal {
-  color: #ef4444;
-  text-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  color: #ff8787;
+  text-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
 }
 
 .event-title.blank {
-  color: #34d399;
-  text-shadow: 0 0 20px rgba(52, 211, 153, 0.6);
+  color: #51cf66;
+  text-shadow: 0 0 16px rgba(81, 207, 102, 0.5);
 }
 
 .call-details {
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -147,41 +162,37 @@ const { t } = useI18n();
 }
 
 .highlight.caller {
-  color: #60a5fa;
+  color: #748ffc;
 }
 
 .highlight.accused {
-  color: #f87171;
+  color: #ff8787;
 }
 
 /* Revealed cards */
 .revealed-cards-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .reveal-card {
-  width: 74px;
-  height: 106px;
-  font-size: 30px;
+  width: 70px;
+  height: 102px;
+  font-size: 28px;
   cursor: default;
   transform: none;
-  animation: cardFlip 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: cardFlip 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
 @keyframes cardFlip {
-  0% { transform: scale(0.5) rotateY(90deg); opacity: 0; }
+  0% { transform: scale(0.6) rotateY(90deg); opacity: 0; }
   100% { transform: scale(1) rotateY(0deg); opacity: 1; }
 }
 
-.shot-icon {
-  font-size: 60px;
-}
-
 .shot-sub {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   line-height: 1.5;
 }

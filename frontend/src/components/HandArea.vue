@@ -2,9 +2,8 @@
   <div class="hand-area glass-panel">
     <div class="hand-header">
       <div class="hand-title-group">
-        <span class="hand-icon">🎴</span>
         <h3>{{ t('my_hand_title') }}</h3>
-        <span class="hand-count-pill">({{ hand.length }})</span>
+        <span class="hand-count">({{ hand.length }})</span>
       </div>
 
       <div class="selection-status">
@@ -15,7 +14,7 @@
       </div>
     </div>
 
-    <!-- Hand Cards Carousel / Grid -->
+    <!-- Hand Cards Row -->
     <div class="hand-cards-container" :class="{ 'not-my-turn': !isMyTurn }">
       <div
         v-for="(card, index) in hand"
@@ -60,14 +59,14 @@ function onCardClick(index) {
 
 <style scoped>
 .hand-area {
-  padding: 16px 20px;
-  margin-bottom: 16px;
-  background: rgba(18, 21, 28, 0.9);
-  border: 1px solid var(--border-subtle);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  background: #141720;
+  border: 1px solid var(--border-brass);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .hand-header {
@@ -75,26 +74,26 @@ function onCardClick(index) {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .hand-title-group {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .hand-title-group h3 {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
 }
 
-.hand-count-pill {
+.hand-count {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-gold);
+  font-weight: 700;
+  color: var(--gold-accent);
 }
 
 .selection-status {
@@ -106,7 +105,7 @@ function onCardClick(index) {
 .selection-count {
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent-gold);
+  color: var(--gold-accent);
 }
 
 .not-turn-tip {
@@ -120,17 +119,17 @@ function onCardClick(index) {
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  min-height: 120px;
-  padding-top: 18px;
+  min-height: 116px;
+  padding-top: 14px;
 }
 
 .hand-cards-container.not-my-turn .hand-card {
   cursor: default;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 .hand-cards-container.not-my-turn .hand-card:hover {
   transform: none;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
-  border-color: #544438;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  border-color: #d9d2c5;
 }
 </style>

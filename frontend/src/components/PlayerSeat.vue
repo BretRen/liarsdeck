@@ -8,18 +8,20 @@
       'is-me': isMe,
     }"
   >
-    <!-- Turn Indicator Glow Banner -->
-    <div v-if="isActiveTurn && !player.is_spectator" class="turn-ribbon">
-      <span>TURN</span>
+    <!-- Turn Indicator & Countdown Ring -->
+    <div v-if="isActiveTurn && !player.is_spectator" class="turn-bar">
+      <span class="turn-label">CURRENT TURN</span>
+      <span v-if="remainingSeconds > 0" class="turn-seconds">{{ remainingSeconds }}s</span>
     </div>
 
-    <!-- Player Header Info -->
+    <!-- Header: Name & Role Tags -->
     <div class="player-header">
       <div class="player-name-wrapper">
-        <span class="player-name">{{ player.nickname }}</span>
-        <span v-if="player.is_host" class="tag host-tag" :title="t('host_tag')">👑 {{ t('host_tag') }}</span>
-        <span v-if="player.is_spectator" class="tag spec-tag">👀 {{ t('spec_tag') }}</span>
-        <span v-if="isMe" class="tag me-tag">({{ t('me_tag') }})</span>
+        <span class="player-name" :title="player.nickname">{{ player.nickname }}</span>
+        <span v-if="player.is_host" class="tag host-tag">{{ t('host_tag') }}</span>
+        <span v-if="player.is_spectator" class="tag spec-tag">{{ t('spec_tag') }}</span>
+        <span v-if="player.is_alive && !player.is_spectator && player.is_connected === false" class="tag offline-tag">{{ t('offline_tag') }}</span>
+        <span v-if="isMe" class="tag me-tag">[{{ t('me_tag') }}]</span>
       </div>
 
       <!-- Kick Button for Host -->
@@ -33,42 +35,41 @@
       </button>
     </div>
 
-    <!-- Non-Spectator Info -->
+    <!-- Body for Non-Spectators -->
     <div v-if="!player.is_spectator" class="player-body">
-      <!-- Revolver Cylinder Slots Indicator (6 Chambers) -->
-      <div class="revolver-cylinder" :title="`${t('bullets_label')}: ${player.bullets}/6`">
+      <!-- 6-Chamber Revolver Visual Indicator -->
+      <div class="cylinder-row" :title="`${t('bullets_label')}: ${player.bullets}/6`">
         <div
           v-for="i in 6"
           :key="i"
-          class="chamber-slot"
+          class="chamber-bullet"
           :class="{
             loaded: player.is_alive && i <= player.bullets,
-            fired: player.is_alive && i > player.bullets,
+            empty: player.is_alive && i > player.bullets,
             fatal: !player.is_alive,
           }"
         ></div>
       </div>
 
       <div class="player-meta">
-        <div v-if="player.is_alive" class="meta-item">
-          <span class="meta-icon">🃏</span>
-          <span class="meta-val">{{ player.hand ? player.hand.length : 0 }}</span>
+        <div v-if="player.is_alive" class="cards-count">
+          <span class="cards-label">{{ t('hand_count_label') }}:</span>
+          <span class="cards-num">{{ player.hand ? player.hand.length : 0 }}</span>
         </div>
-        <div v-else class="dead-badge">
+        <div v-else class="dead-notice">
           {{ t('dead_tag') }}
         </div>
       </div>
 
-      <!-- Ready Status in Waiting Stage -->
-      <div v-if="gameStatus === 'waiting'" class="ready-badge" :class="{ ready: player.is_ready }">
-        <span class="ready-icon">{{ player.is_ready ? '✓' : '…' }}</span>
+      <!-- Ready Status during Waiting Phase -->
+      <div v-if="gameStatus === 'waiting'" class="ready-status-box" :class="{ ready: player.is_ready }">
         <span>{{ player.is_ready ? t('ready_status') : t('unready_status') }}</span>
       </div>
     </div>
 
-    <!-- Spectator Info -->
+    <!-- Spectator Body -->
     <div v-else class="spectator-body">
-      <span class="spec-watching-text">👀 {{ t('watching_tag') }}</span>
+      <span>{{ t('watching_tag') }}</span>
     </div>
   </div>
 </template>
@@ -76,6 +77,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from '../composables/useI18n';
+import { useGameStore } from '../composables/useGameStore';
 
 const props = defineProps({
   player: { type: Object, required: true },
@@ -87,61 +89,75 @@ const props = defineProps({
 
 defineEmits(['kick']);
 const { t } = useI18n();
+const store = useGameStore();
+
+const remainingSeconds = computed(() => store.remainingSeconds.value);
 </script>
 
 <style scoped>
 .player-seat {
   position: relative;
   flex: 1;
-  min-width: 130px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--border-subtle);
+  min-width: 125px;
+  background: #151821;
+  border: 1px solid var(--border-brass);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  transition: all 0.2s ease;
 }
 
 .player-seat.is-me {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: #3b5bdb;
+  background: #161a26;
 }
 
 .player-seat.active {
-  border-color: var(--accent-gold);
-  background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.15) 0%, var(--bg-card) 80%);
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 8px 24px rgba(0, 0, 0, 0.6);
-  transform: translateY(-4px);
+  border-color: var(--gold-accent);
+  background: #1c1c1a;
+  box-shadow: 0 0 16px var(--gold-glow);
+  transform: translateY(-2px);
 }
 
 .player-seat.dead {
-  opacity: 0.45;
-  filter: grayscale(0.8);
-  border-color: rgba(239, 68, 68, 0.2);
+  opacity: 0.4;
+  filter: grayscale(0.9);
+  border-color: #491212;
 }
 
 .player-seat.spectator {
   border-style: dashed;
   border-color: var(--border-subtle);
-  background: rgba(18, 21, 28, 0.4);
+  background: #101217;
 }
 
-.turn-ribbon {
+.turn-bar {
   position: absolute;
-  top: -9px;
+  top: -8px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #0a0b0e;
-  font-family: var(--font-heading);
-  font-weight: 900;
-  font-size: 10px;
-  letter-spacing: 1px;
-  padding: 2px 10px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+  background: var(--gold-accent);
+  color: #0d0f14;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 1px 8px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.turn-seconds {
+  background: #0d0f14;
+  color: #ffffff;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 8.5px;
 }
 
 .player-header {
@@ -154,143 +170,151 @@ const { t } = useI18n();
 .player-name-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  overflow: hidden;
 }
 
 .player-name {
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--text-primary);
-  max-width: 90px;
+  max-width: 85px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tag {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 .host-tag {
-  background: rgba(245, 158, 11, 0.18);
-  color: var(--accent-gold);
-  border: 1px solid var(--border-gold);
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold-accent);
+  border: 1px solid var(--border-brass);
 }
 
 .spec-tag {
-  background: rgba(156, 163, 175, 0.15);
-  color: var(--text-secondary);
+  background: #202430;
+  color: var(--text-muted);
+}
+
+.offline-tag {
+  background: #3b1414;
+  border: 1px solid #822222;
+  color: #ff8787;
+  animation: pulseRed 1.2s infinite ease-in-out;
 }
 
 .me-tag {
-  color: var(--accent-blue);
-  font-weight: 700;
+  color: #748ffc;
 }
 
 .kick-btn {
-  padding: 2px 6px;
-  font-size: 10px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
-  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 9px;
+  background: #2b1414;
+  border: 1px solid #742a2a;
+  color: #ff8787;
+  border-radius: 2px;
 }
 .kick-btn:hover {
-  background: #ef4444;
+  background: #c92a2a;
   color: #fff;
 }
 
 .player-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-/* Revolver Chamber Slots */
-.revolver-cylinder {
+/* 6-Chamber Visual */
+.cylinder-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 20px;
+  gap: 3px;
+  padding: 3px;
+  background: #0d0f14;
+  border-radius: 4px;
   border: 1px solid var(--border-subtle);
 }
 
-.chamber-slot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  transition: all 0.25s ease;
+.chamber-bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #242938;
+  border: 1px solid #363d50;
+  transition: all 0.2s ease;
 }
 
-.chamber-slot.loaded {
-  background: linear-gradient(135deg, #fbbf24, #d97706);
-  box-shadow: 0 0 5px rgba(245, 158, 11, 0.6);
+.chamber-bullet.loaded {
+  background: #c59b27;
+  border-color: #e0b438;
+  box-shadow: 0 0 3px rgba(212, 175, 55, 0.5);
 }
 
-.chamber-slot.fired {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--border-subtle);
+.chamber-bullet.empty {
+  background: #141720;
+  border-color: #242835;
 }
 
-.chamber-slot.fatal {
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
+.chamber-bullet.fatal {
+  background: #c92a2a;
+  border-color: #ff8787;
 }
 
 .player-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
-.meta-item {
+.cards-count {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 4px;
-  font-weight: 600;
 }
 
-.dead-badge {
-  font-size: 12px;
+.cards-num {
+  font-family: var(--font-serif);
   font-weight: 700;
-  color: #f87171;
+  color: var(--gold-accent);
 }
 
-.ready-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+.dead-notice {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff8787;
+}
+
+.ready-status-box {
+  text-align: center;
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(156, 163, 175, 0.1);
+  padding: 2px 4px;
+  border-radius: 2px;
+  background: #1a1e28;
   color: var(--text-muted);
 }
 
-.ready-badge.ready {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+.ready-status-box.ready {
+  background: rgba(43, 138, 62, 0.2);
+  color: #51cf66;
+  border: 1px solid rgba(43, 138, 62, 0.4);
 }
 
 .spectator-body {
-  padding: 8px 0;
+  padding: 4px 0;
   text-align: center;
-}
-
-.spec-watching-text {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 </style>

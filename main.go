@@ -18,6 +18,7 @@ func main() {
 
 	hub := room.NewHub()
 	wsHandler := handler.NewWSHandler(hub)
+	adminHandler := handler.NewAdminHandler(hub, port)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -28,6 +29,13 @@ func main() {
 
 	// WebSocket 对战接口
 	e.GET("/ws", wsHandler.HandleWebSocket)
+
+	// 管理员与自动更新 API
+	adminGroup := e.Group("/api/admin")
+	adminGroup.POST("/auth", adminHandler.Auth)
+	adminGroup.POST("/check-update", adminHandler.CheckUpdate)
+	adminGroup.POST("/trigger-update", adminHandler.TriggerUpdate)
+	adminGroup.POST("/stats", adminHandler.GetStats)
 
 	// 静态文件与 SPA 页面托管
 	e.Static("/", "public")

@@ -2,6 +2,7 @@ package game
 
 import (
 	"testing"
+	"time"
 
 	"pdnode.com/play/liarsbar-web/internal/model"
 )
@@ -139,7 +140,20 @@ func TestCallLiarEmptyHandHonestVictory(t *testing.T) {
 	g.State.TableCard = model.Ace
 	g.HiddenCards = []model.Card{model.Ace} // Alice played last card Ace (Honest)
 
-	g.CallLiar(1, 0, nil, nil, nil)
+	var shotTarget string
+	var shotFatal bool
+
+	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool) {
+		shotTarget = target
+		shotFatal = fatal
+	})
+
+	if shotTarget != "Bob" {
+		t.Fatalf("expected Bob (caller) to get shot first, got %s", shotTarget)
+	}
+	if shotFatal != false {
+		t.Fatalf("expected blank shot for Bob")
+	}
 
 	if g.State.Status != model.StatusGameOver {
 		t.Fatalf("expected game_over on empty hand honest win, got %s", g.State.Status)
@@ -148,3 +162,64 @@ func TestCallLiarEmptyHandHonestVictory(t *testing.T) {
 		t.Fatalf("expected Alice to win, got %s", g.State.Winner)
 	}
 }
+
+func TestPauseAndResumeGame(t *testing.T) {
+	g := NewGame("TEST05")
+	p1 := &model.Player{ID: "p1", Nickname: "Alice", IsAlive: true, Bullets: 6}
+	p2 := &model.Player{ID: "p2", Nickname: "Bob", IsAlive: true, Bullets: 6}
+	g.State.Players = []*model.Player{p1, p2}
+	g.State.Status = model.StatusPlaying
+	g.State.Deadline = time.Now().Add(25 * time.Second).Unix()
+
+	// Alice disconnects -> Game pauses
+	g.PauseGame(p1)
+
+	if g.State.Status != model.StatusPaused {
+		t.Fatalf("expected status paused, got %s", g.State.Status)
+	}
+	if g.State.PausedPlayer != "Alice" {
+		t.Fatalf("expected PausedPlayer Alice, got %s", g.State.PausedPlayer)
+	}
+	if g.State.RemainingTurnSeconds < 20 || g.State.RemainingTurnSeconds > 26 {
+		t.Fatalf("expected remaining seconds around 25, got %d", g.State.RemainingTurnSeconds)
+	}
+
+	// Alice reconnects within 30s -> Game resumes
+	g.ResumeGame(p1)
+
+	if g.State.Status != model.StatusPlaying {
+		t.Fatalf("expected status playing after resume, got %s", g.State.Status)
+	}
+	if g.State.PausedPlayer != "" {
+		t.Fatalf("expected empty PausedPlayer, got %s", g.State.PausedPlayer)
+	}
+	if g.State.Deadline <= time.Now().Unix() {
+		t.Fatalf("expected deadline in future")
+	}
+}
+
+func TestPauseTimeoutKill(t *testing.T) {
+	g := NewGame("TEST06")
+	p1 := &model.Player{ID: "p1", Nickname: "Alice", IsAlive: true, Bullets: 6, ClientRef: nil}
+	p2 := &model.Player{ID: "p2", Nickname: "Bob", IsAlive: true, Bullets: 6, ClientRef: "connected"}
+	g.State.Players = []*model.Player{p1, p2}
+	g.State.Status = model.StatusPlaying
+	g.State.CurrentTurn = 0
+
+	g.PauseGame(p1)
+	g.State.PauseDeadline = time.Now().Add(-1 * time.Second).Unix() // Expired
+
+	g.HandlePauseTimeout()
+
+	if p1.IsAlive {
+		t.Fatalf("Alice should be eliminated after timeout")
+	}
+	if g.State.Status != model.StatusGameOver {
+		t.Fatalf("expected game over with only Bob alive, got %s", g.State.Status)
+	}
+	if g.State.Winner != "Bob" {
+		t.Fatalf("expected Bob to win, got %s", g.State.Winner)
+	}
+}
+
+

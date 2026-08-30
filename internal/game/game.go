@@ -44,6 +44,69 @@ func (g *Game) ResetTimer() {
 	g.State.Deadline = time.Now().Add(30 * time.Second).Unix()
 }
 
+func (g *Game) PauseGame(disconnectedPlayer *model.Player) {
+	remaining := g.State.Deadline - time.Now().Unix()
+	if remaining < 1 {
+		remaining = 1
+	}
+	g.State.RemainingTurnSeconds = remaining
+	g.State.Status = model.StatusPaused
+	g.State.PausedPlayer = disconnectedPlayer.Nickname
+	g.State.PauseDeadline = time.Now().Add(30 * time.Second).Unix()
+	g.Log(fmt.Sprintf("⏸️ 玩家 %s 断线，游戏暂停 30 秒等待重连... / ⏸️ %s disconnected, game paused for 30s...", disconnectedPlayer.Nickname, disconnectedPlayer.Nickname))
+}
+
+func (g *Game) ResumeGame(reconnectedPlayer *model.Player) {
+	g.State.Status = model.StatusPlaying
+	g.State.PausedPlayer = ""
+	g.State.PauseDeadline = 0
+
+	remaining := g.State.RemainingTurnSeconds
+	if remaining < 3 {
+		remaining = 3
+	}
+	g.State.Deadline = time.Now().Add(time.Duration(remaining) * time.Second).Unix()
+	g.Log(fmt.Sprintf("▶️ 玩家 %s 重新连接成功，游戏继续！(剩余操作时间: %d秒) / ▶️ %s reconnected, game resumed!", reconnectedPlayer.Nickname, remaining, reconnectedPlayer.Nickname))
+}
+
+func (g *Game) HandlePauseTimeout() {
+	var timedOutPlayer *model.Player
+	for _, p := range g.State.Players {
+		if p.Nickname == g.State.PausedPlayer {
+			timedOutPlayer = p
+			break
+		}
+	}
+
+	if timedOutPlayer != nil && timedOutPlayer.IsAlive && timedOutPlayer.ClientRef == nil {
+		timedOutPlayer.IsAlive = false
+		g.Log(fmt.Sprintf("⌛ 玩家 %s 30秒断线重连超时，已被判定出局！ / ⌛ %s failed to reconnect within 30s and was eliminated!", timedOutPlayer.Nickname, timedOutPlayer.Nickname))
+	}
+
+	g.State.Status = model.StatusPlaying
+	g.State.PausedPlayer = ""
+	g.State.PauseDeadline = 0
+
+	g.AdvanceToAlive()
+
+	aliveCount := 0
+	var lastAlive *model.Player
+	for _, pp := range g.State.Players {
+		if !pp.IsSpectator && pp.IsAlive {
+			aliveCount++
+			lastAlive = pp
+		}
+	}
+	if aliveCount <= 1 && lastAlive != nil {
+		g.State.Status = model.StatusGameOver
+		g.State.Winner = lastAlive.Nickname
+		g.Log(fmt.Sprintf("🏆 %s 获胜！ / 🏆 %s wins!", lastAlive.Nickname, lastAlive.Nickname))
+		return
+	}
+
+	g.ResetTimer()
+}
+
 func (g *Game) StartRound() {
 	deck := NewDeck()
 	var tableCard model.Card
@@ -167,8 +230,6 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 			newHand = append(newHand, hc)
 		}
 	}
-
-	// 必须能够匹配所有打出的牌
 	for _, u := range used {
 		if !u {
 			return false
@@ -180,10 +241,10 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 	g.State.LastPlayedCnt = len(cards)
 	g.State.LastPlayer = playerIdx
 
-	g.Log(fmt.Sprintf("%s 宣称打出了 %d 张牌 / %s played %d card(s)", p.Nickname, len(cards), p.Nickname, len(cards)))
+	g.Log(fmt.Sprintf("🎴 %s 打出了 %d 张暗牌 / 🎴 %s played %d cards", p.Nickname, len(cards), p.Nickname, len(cards)))
 
 	if len(p.Hand) == 0 {
-		g.Log(fmt.Sprintf("%s 打完了所有手牌！下家必须质疑 / %s emptied their hand! Next player must call liar", p.Nickname, p.Nickname))
+		g.Log(fmt.Sprintf("⚡ %s 手牌已清空！下家必须质疑！ / ⚡ %s has 0 cards left! Next player must call liar!", p.Nickname, p.Nickname))
 	}
 
 	g.NextTurn()
@@ -228,19 +289,46 @@ func (g *Game) CallLiar(
 		g.FireGun(accusedIdx, onShot)
 	} else {
 		g.Log("❌ 质疑失败！出牌者是清白的！ / ❌ Challenge failed! The cards were honest!")
-		if len(accused.Hand) == 0 {
+		// 1. 质疑者（诬告者）必须先开枪受罚！
+		g.ShootPlayer(callerIdx, onShot)
+
+		// 2. 枪击结算后，若出牌者清白且此时手牌为 0，则出牌者获胜！
+		if accused.IsAlive && len(accused.Hand) == 0 {
 			g.State.Status = model.StatusGameOver
 			g.State.Winner = accused.Nickname
 			g.Log(fmt.Sprintf("🎉 🏆 %s 成功出完手牌且未说谎，获得游戏胜利！ / 🎉 🏆 %s emptied all cards honestly and wins!", accused.Nickname, accused.Nickname))
 			return
 		}
-		g.FireGun(callerIdx, onShot)
+
+		// 3. 否则检查剩余存活人数或开启新一轮
+		g.State.CurrentTurn = callerIdx
+		g.AdvanceToAlive()
+		if g.State.Status == model.StatusGameOver {
+			return
+		}
+
+		aliveCount := 0
+		var lastAlive *model.Player
+		for _, pp := range g.State.Players {
+			if !pp.IsSpectator && pp.IsAlive {
+				aliveCount++
+				lastAlive = pp
+			}
+		}
+		if aliveCount <= 1 && lastAlive != nil {
+			g.State.Status = model.StatusGameOver
+			g.State.Winner = lastAlive.Nickname
+			g.Log(fmt.Sprintf("🏆 %s 获胜！ / 🏆 %s wins!", lastAlive.Nickname, lastAlive.Nickname))
+			return
+		}
+
+		g.StartRound()
 	}
 }
 
-func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool)) {
+func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)) bool {
 	if playerIdx < 0 || playerIdx >= len(g.State.Players) {
-		return
+		return false
 	}
 	p := g.State.Players[playerIdx]
 
@@ -265,6 +353,12 @@ func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool)) {
 	} else {
 		g.Log(fmt.Sprintf("💨 咔哒。%s 抽中空包弹，逃过一劫。 / 💨 Click. %s survived!", p.Nickname, p.Nickname))
 	}
+
+	return isFatal
+}
+
+func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool)) {
+	g.ShootPlayer(playerIdx, onShot)
 
 	g.State.CurrentTurn = playerIdx
 	g.AdvanceToAlive()
@@ -291,35 +385,24 @@ func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool)) {
 }
 
 func (g *Game) ResetGame() {
-	alive := make([]*model.Player, 0)
+	g.State.Status = model.StatusWaiting
+	g.State.TableCard = ""
+	g.State.LastPlayedCnt = 0
+	g.State.LastPlayer = -1
+	g.State.CurrentTurn = -1
+	g.State.Winner = ""
+	g.State.PauseDeadline = 0
+	g.State.PausedPlayer = ""
+	g.State.RemainingTurnSeconds = 0
+	g.HiddenCards = []model.Card{}
+
 	for _, p := range g.State.Players {
-		if p.ClientRef == nil {
-			continue
-		}
-		p.IsAlive = true
 		p.Hand = []model.Card{}
+		p.IsReady = false
+		p.IsAlive = true
 		p.Bullets = 6
 		p.Revolver = NewRevolver()
-		p.IsReady = false
-		alive = append(alive, p)
+		p.HasUsedDisconnectGrace = false
 	}
-	g.State.Players = alive
-	g.State.Winner = ""
-	g.State.Logs = []string{}
-	g.State.CurrentTurn = -1
-	g.State.LastPlayer = -1
-	g.State.LastPlayedCnt = 0
-
-	for _, p := range g.State.Players {
-		p.IsHost = false
-	}
-	for _, p := range g.State.Players {
-		if !p.IsSpectator {
-			p.IsHost = true
-			break
-		}
-	}
-
-	g.State.Status = model.StatusWaiting
-	g.Log("重新开始！请准备 / New game! Please ready up")
+	g.Log("🔄 游戏已重置，等待玩家准备 / Game reset")
 }

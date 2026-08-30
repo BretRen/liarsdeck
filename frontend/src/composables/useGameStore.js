@@ -3,6 +3,9 @@ import { useAudio } from './useAudio';
 import confetti from 'canvas-confetti';
 
 const connected = ref(false);
+const hasJoinedRoom = ref(false);
+const isDisconnected = ref(false);
+const isReconnecting = ref(false);
 const ws = ref(null);
 const state = ref({
   status: 'waiting',
@@ -13,6 +16,9 @@ const state = ref({
   last_played_cnt: 0,
   logs: [],
   deadline: 0,
+  pause_deadline: 0,
+  paused_player: '',
+  remaining_turn_seconds: 0,
   winner: '',
   room_code: '',
 });
@@ -20,7 +26,7 @@ const state = ref({
 const currentUnix = ref(Math.floor(Date.now() / 1000));
 setInterval(() => {
   currentUnix.value = Math.floor(Date.now() / 1000);
-}, 1000);
+}, 250);
 
 const selectedIndexes = ref([]);
 const eventQueue = ref([]);
@@ -35,6 +41,7 @@ const errorMsg = ref('');
 const pendingState = ref(null);
 
 let toastTimer = null;
+let reconnectTimer = null;
 
 export function useGameStore() {
   const audio = useAudio();
@@ -63,13 +70,23 @@ export function useGameStore() {
   const amHost = computed(() => myPlayer.value && myPlayer.value.is_host);
 
   const isMyTurn = computed(() => {
-    if (!state.value.players || state.value.current_turn === -1 || !myPlayer.value) return false;
+    if (state.value.status !== 'playing' || !state.value.players || state.value.current_turn === -1 || !myPlayer.value) return false;
     return state.value.players[state.value.current_turn]?.id === myId.value;
   });
 
+  const remainingSeconds = computed(() => {
+    if (state.value.status !== 'playing' || !state.value.deadline) return 0;
+    return Math.max(0, state.value.deadline - currentUnix.value);
+  });
+
+  const pauseRemainingSeconds = computed(() => {
+    if (state.value.status !== 'paused' || !state.value.pause_deadline) return 0;
+    return Math.max(0, state.value.pause_deadline - currentUnix.value);
+  });
+
   const canPlay = computed(() => {
+    if (state.value.status !== 'playing') return false;
     if (!isMyTurn.value) return false;
-    // 如果上家打光了手牌，下家必须质疑
     if (state.value.last_player !== -1 && state.value.last_player < state.value.players.length) {
       const lastP = state.value.players[state.value.last_player];
       if (lastP.hand && lastP.hand.length === 0) return false;
@@ -78,6 +95,7 @@ export function useGameStore() {
   });
 
   const canCallLiar = computed(() => {
+    if (state.value.status !== 'playing') return false;
     return (
       isMyTurn.value &&
       state.value.last_player !== -1 &&
@@ -96,7 +114,7 @@ export function useGameStore() {
     return players.length >= 2 && players.every((p) => p.is_ready);
   });
 
-  // ── Event Queue ──
+  // ── Event Queue & Delayed Victory Animation ──
   function processQueue() {
     if (processingEvent.value || eventQueue.value.length === 0) return;
     processingEvent.value = true;
@@ -116,15 +134,33 @@ export function useGameStore() {
       audio.playCardDeal();
     }
 
-    const dur = { liar_call: 1800, reveal: 2600, shot: 2200 };
+    const dur = { liar_call: 1900, reveal: 2400, shot: 2200 };
     setTimeout(() => {
       currentStep.value = '';
       processingEvent.value = false;
 
+      // When ALL event queue animations are finished, commit pending state
       if (eventQueue.value.length === 0 && pendingState.value) {
+        const isWinningTransition =
+          pendingState.value.status === 'game_over' &&
+          state.value.status !== 'game_over' &&
+          pendingState.value.winner;
+
         state.value = pendingState.value;
         pendingState.value = null;
         if (!isMyTurn.value) selectedIndexes.value = [];
+
+        // Trigger victory celebration ONLY after all animations have ended
+        if (isWinningTransition) {
+          setTimeout(() => {
+            audio.playVictory();
+            confetti({
+              particleCount: 120,
+              spread: 80,
+              origin: { y: 0.6 },
+            });
+          }, 300);
+        }
       }
       processQueue();
     }, dur[ev.type] || 2000);
@@ -152,28 +188,43 @@ export function useGameStore() {
     ws.value = socket;
 
     socket.onopen = () => {
-      connected.value = true;
       errorMsg.value = '';
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
     };
 
     socket.onclose = () => {
-      if (connected.value) {
-        showToast('连接已断开，正在尝试重连...');
+      // 只有在已成功加入房间且非主动退出的情况下，网络意外断开才弹窗重连
+      if (hasJoinedRoom.value) {
+        isDisconnected.value = true;
+        isReconnecting.value = true;
         if (myPlayerToken.value && myRoomCode.value) {
-          setTimeout(tryReconnect, 1500);
-        } else {
-          setTimeout(() => {
-            connected.value = false;
-          }, 1500);
+          scheduleReconnect();
         }
+      } else {
+        connected.value = false;
+        isDisconnected.value = false;
+        isReconnecting.value = false;
       }
     };
 
     socket.onmessage = handleMessage;
   }
 
+  function scheduleReconnect() {
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      if (isDisconnected.value && hasJoinedRoom.value) {
+        tryReconnect();
+      }
+    }, 2000);
+  }
+
   function tryReconnect() {
     if (!myRoomCode.value || !myPlayerToken.value || !myNickname.value) return;
+    isReconnecting.value = true;
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const host = window.location.host;
     const url = `${proto}://${host}/ws?action=reconnect&code=${encodeURIComponent(
@@ -182,19 +233,24 @@ export function useGameStore() {
 
     const newWs = new WebSocket(url);
     newWs.onopen = () => {
-      showToast('🔗 重新连接成功！');
       ws.value = newWs;
-      connected.value = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       newWs.onclose = () => {
-        if (connected.value) {
-          showToast('连接已断开');
-          setTimeout(tryReconnect, 3000);
+        if (hasJoinedRoom.value) {
+          isDisconnected.value = true;
+          isReconnecting.value = true;
+          scheduleReconnect();
         }
       };
       newWs.onmessage = handleMessage;
     };
     newWs.onclose = () => {
-      setTimeout(tryReconnect, 3000);
+      if (isDisconnected.value && hasJoinedRoom.value) {
+        scheduleReconnect();
+      }
     };
   }
 
@@ -204,12 +260,24 @@ export function useGameStore() {
       if (msg.error) {
         errorMsg.value = msg.error;
         showToast(msg.error);
+        connected.value = false;
+        hasJoinedRoom.value = false;
+        isDisconnected.value = false;
+        isReconnecting.value = false;
+        if (ws.value) {
+          ws.value.close();
+          ws.value = null;
+        }
         return;
       }
 
       if (msg.type === 'game_state') {
+        hasJoinedRoom.value = true;
+        connected.value = true;
+        isDisconnected.value = false;
+        isReconnecting.value = false;
+
         const prevStatus = state.value.status;
-        const prevTurn = state.value.current_turn;
 
         if (msg.data.players && myNickname.value) {
           const me = msg.data.players.find((p) => p.nickname === myNickname.value);
@@ -220,21 +288,26 @@ export function useGameStore() {
           myRoomCode.value = msg.data.room_code;
         }
 
-        // 胜出特效
-        if (msg.data.status === 'game_over' && prevStatus !== 'game_over' && msg.data.winner) {
-          audio.playVictory();
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-        }
-
-        if (currentStep.value !== '') {
+        // If there are ongoing or queued animations, delay state commit and victory fanfare
+        if (currentStep.value !== '' || eventQueue.value.length > 0) {
           pendingState.value = msg.data;
         } else {
+          const isWinningTransition =
+            msg.data.status === 'game_over' &&
+            prevStatus !== 'game_over' &&
+            msg.data.winner;
+
           state.value = msg.data;
           if (!isMyTurn.value) selectedIndexes.value = [];
+
+          if (isWinningTransition) {
+            audio.playVictory();
+            confetti({
+              particleCount: 120,
+              spread: 80,
+              origin: { y: 0.6 },
+            });
+          }
         }
       } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
         eventQueue.value.push({ type: msg.type, data: msg.data });
@@ -301,22 +374,40 @@ export function useGameStore() {
     const link = `${window.location.origin}?room=${state.value.room_code || myRoomCode.value}`;
     navigator.clipboard
       .writeText(link)
-      .then(() => showToast('✅ 邀请链接已复制'))
-      .catch(() => showToast(`📋 ${link}`));
+      .then(() => showToast('邀请链接已复制'))
+      .catch(() => showToast(link));
   }
 
-  function disconnect() {
+  function exitToLobby() {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     if (ws.value) {
       ws.value.close();
       ws.value = null;
     }
+    hasJoinedRoom.value = false;
+    isDisconnected.value = false;
+    isReconnecting.value = false;
     connected.value = false;
+    myRoomCode.value = '';
+    myPlayerToken.value = '';
+  }
+
+  function disconnect() {
+    exitToLobby();
   }
 
   return {
     connected,
+    hasJoinedRoom,
+    isDisconnected,
+    isReconnecting,
     state,
     currentUnix,
+    remainingSeconds,
+    pauseRemainingSeconds,
     selectedIndexes,
     currentStep,
     currentStepData,
@@ -346,6 +437,8 @@ export function useGameStore() {
     resetGame,
     kickPlayer,
     copyInvite,
+    tryReconnect,
+    exitToLobby,
     disconnect,
     showToast,
   };

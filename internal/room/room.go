@@ -11,31 +11,26 @@ import (
 )
 
 type Room struct {
-	Hub     *Hub
-	ID      string
 	Code    string
 	Clients map[*Client]bool
 	Game    *game.Game
+	Hub     *Hub
 	mu      sync.Mutex
 }
 
-func NewRoom(hub *Hub, code string) *Room {
+func NewRoom(code string, hub *Hub) *Room {
 	return &Room{
-		Hub:     hub,
-		ID:      code,
 		Code:    code,
 		Clients: make(map[*Client]bool),
 		Game:    game.NewGame(code),
+		Hub:     hub,
 	}
 }
 
-func (r *Room) Lock()   { r.mu.Lock() }
-func (r *Room) Unlock() { r.mu.Unlock() }
-
-func (r *Room) AddClient(c *Client) {
+func (r *Room) AddClient(client *Client) {
 	r.mu.Lock()
-	r.Clients[c] = true
-	r.mu.Unlock()
+	defer r.mu.Unlock()
+	r.Clients[client] = true
 }
 
 func (r *Room) Broadcast() {
@@ -46,16 +41,19 @@ func (r *Room) Broadcast() {
 	}
 
 	state := map[string]any{
-		"status":          r.Game.State.Status,
-		"players":         safePlayers,
-		"current_turn":    r.Game.State.CurrentTurn,
-		"table_card":      r.Game.State.TableCard,
-		"last_player":     r.Game.State.LastPlayer,
-		"last_played_cnt": r.Game.State.LastPlayedCnt,
-		"logs":            r.Game.State.Logs,
-		"deadline":        r.Game.State.Deadline,
-		"winner":          r.Game.State.Winner,
-		"room_code":       r.Game.State.RoomCode,
+		"status":                 r.Game.State.Status,
+		"players":                safePlayers,
+		"current_turn":           r.Game.State.CurrentTurn,
+		"table_card":             r.Game.State.TableCard,
+		"last_player":            r.Game.State.LastPlayer,
+		"last_played_cnt":        r.Game.State.LastPlayedCnt,
+		"logs":                   r.Game.State.Logs,
+		"deadline":               r.Game.State.Deadline,
+		"pause_deadline":         r.Game.State.PauseDeadline,
+		"paused_player":          r.Game.State.PausedPlayer,
+		"remaining_turn_seconds": r.Game.State.RemainingTurnSeconds,
+		"winner":                 r.Game.State.Winner,
+		"room_code":              r.Game.State.RoomCode,
 	}
 	r.Game.Unlock()
 
@@ -127,9 +125,42 @@ func (r *Room) RemoveClient(client *Client) {
 					}
 				}
 			}
-		} else {
-			// 游戏中：保留席位以便断线重连
-			r.Game.Log(fmt.Sprintf("📴 %s 断线了 / 📴 %s disconnected", p.Nickname, p.Nickname))
+		} else if r.Game.State.Status == model.StatusPlaying || r.Game.State.Status == model.StatusPaused {
+			if p.IsAlive && !p.IsSpectator {
+				if !p.HasUsedDisconnectGrace {
+					// 第一次断线：触发 30 秒暂停保护
+					p.HasUsedDisconnectGrace = true
+					r.Game.PauseGame(p)
+				} else {
+					// 第二次断线：直接判定淘汰出局
+					p.IsAlive = false
+					r.Game.Log(fmt.Sprintf("💀 玩家 %s 再次断线，直接被判定淘汰出局！ / 💀 %s disconnected again and was eliminated!", p.Nickname, p.Nickname))
+
+					if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+						r.Game.State.Status = model.StatusPlaying
+						r.Game.State.PausedPlayer = ""
+						r.Game.State.PauseDeadline = 0
+					}
+
+					r.Game.AdvanceToAlive()
+
+					aliveCount := 0
+					var lastAlive *model.Player
+					for _, pp := range r.Game.State.Players {
+						if !pp.IsSpectator && pp.IsAlive {
+							aliveCount++
+							lastAlive = pp
+						}
+					}
+					if aliveCount <= 1 && lastAlive != nil {
+						r.Game.State.Status = model.StatusGameOver
+						r.Game.State.Winner = lastAlive.Nickname
+						r.Game.Log(fmt.Sprintf("🏆 %s 获胜！ / 🏆 %s wins!", lastAlive.Nickname, lastAlive.Nickname))
+					} else {
+						r.Game.ResetTimer()
+					}
+				}
+			}
 		}
 	}
 	r.Game.Unlock()
@@ -287,6 +318,20 @@ func (r *Room) Watchdog() {
 		}
 
 		r.Game.Lock()
+
+		// 1. 处理 30 秒断线暂停超时
+		if r.Game.State.Status == model.StatusPaused {
+			if time.Now().Unix() >= r.Game.State.PauseDeadline {
+				r.Game.HandlePauseTimeout()
+				r.Game.Unlock()
+				r.Broadcast()
+				continue
+			}
+			r.Game.Unlock()
+			continue
+		}
+
+		// 2. 正常游戏中回合操作超时
 		if r.Game.State.Status == model.StatusPlaying && time.Now().Unix() > r.Game.State.Deadline {
 			currIdx := r.Game.State.CurrentTurn
 			if currIdx < 0 || currIdx >= len(r.Game.State.Players) {
