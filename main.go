@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -22,8 +23,35 @@ func main() {
 
 	e := echo.New()
 	e.HideBanner = true
-	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Format: "${time_rfc3339} | ${status} | ${latency_human} | ${method} ${uri}\n",
+
+	// 使用现代且推荐的 RequestLoggerWithConfig 替代已废弃的 LoggerWithConfig
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogURI:      true,
+		LogError:    true,
+		LogLatency:  true,
+		LogMethod:   true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			if v.Error != nil {
+				log.Printf("%s | %d | %v | %s %s | error: %v",
+					v.StartTime.Format(time.RFC3339),
+					v.Status,
+					v.Latency,
+					v.Method,
+					v.URI,
+					v.Error,
+				)
+			} else {
+				log.Printf("%s | %d | %v | %s %s",
+					v.StartTime.Format(time.RFC3339),
+					v.Status,
+					v.Latency,
+					v.Method,
+					v.URI,
+				)
+			}
+			return nil
+		},
 	}))
 	e.Use(middleware.Recover())
 
