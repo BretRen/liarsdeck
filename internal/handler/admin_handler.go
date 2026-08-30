@@ -13,20 +13,21 @@ import (
 	"pdnode.com/play/liarsbar-web/internal/room"
 )
 
+// Version 服务端运行版本号，支持在编译时通过 -ldflags "-X 'pdnode.com/play/liarsbar-web/internal/handler.Version=v...'" 动态注入
+var Version = "v2.0.1"
+
 type AdminHandler struct {
-	Hub     *room.Hub
-	Secret  string
-	Port    string
-	Version string
+	Hub    *room.Hub
+	Secret string
+	Port   string
 }
 
 func NewAdminHandler(hub *room.Hub, port string) *AdminHandler {
 	secret := os.Getenv("ADMIN_SECRET")
 	return &AdminHandler{
-		Hub:     hub,
-		Secret:  secret,
-		Port:    port,
-		Version: "v2.0.0",
+		Hub:    hub,
+		Secret: secret,
+		Port:   port,
 	}
 }
 
@@ -55,7 +56,7 @@ func (h *AdminHandler) Auth(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"authenticated": true,
-		"version":       h.Version,
+		"version":       Version,
 	})
 }
 
@@ -80,7 +81,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	if resp.StatusCode == http.StatusNotFound {
 		return c.JSON(http.StatusOK, map[string]any{
-			"current_version": h.Version,
+			"current_version": Version,
 			"latest_version":  "暂无 Release",
 			"has_update":      false,
 			"release_name":    "尚未发布 Release 版本",
@@ -90,7 +91,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return c.JSON(http.StatusOK, map[string]any{
-			"current_version": h.Version,
+			"current_version": Version,
 			"latest_version":  "—",
 			"has_update":      false,
 			"release_name":    fmt.Sprintf("GitHub 响应异常 (HTTP %d)", resp.StatusCode),
@@ -104,10 +105,10 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 	}
 
 	latestTag, _ := data["tag_name"].(string)
-	hasUpdate := latestTag != "" && latestTag != h.Version
+	hasUpdate := latestTag != "" && latestTag != Version
 
 	return c.JSON(http.StatusOK, map[string]any{
-		"current_version": h.Version,
+		"current_version": Version,
 		"latest_version":  latestTag,
 		"has_update":      hasUpdate,
 		"release_name":    data["name"],

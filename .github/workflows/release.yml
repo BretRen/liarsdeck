@@ -44,32 +44,34 @@ jobs:
         run: |
           mkdir -p dist
           
+          LDFLAGS="-s -w -X 'pdnode.com/play/liarsbar-web/internal/handler.Version=${{ github.ref_name }}'"
+
           # Linux amd64
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux-amd64/liarsdeck main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/linux-amd64/liarsdeck main.go
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/linux-amd64/update ./cmd/update
           cp -r public dist/linux-amd64/
           tar -czvf dist/liarsdeck-linux-amd64.tar.gz -C dist/linux-amd64 liarsdeck update public
 
           # Linux arm64
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/linux-arm64/liarsdeck main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/linux-arm64/liarsdeck main.go
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/linux-arm64/update ./cmd/update
           cp -r public dist/linux-arm64/
           tar -czvf dist/liarsdeck-linux-arm64.tar.gz -C dist/linux-arm64 liarsdeck update public
 
           # Windows amd64
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows-amd64/liarsdeck.exe main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/windows-amd64/liarsdeck.exe main.go
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/windows-amd64/update.exe ./cmd/update
           cp -r public dist/windows-amd64/
           (cd dist/windows-amd64 && zip -r ../liarsdeck-windows-amd64.zip liarsdeck.exe update.exe public)
 
           # macOS (Darwin) amd64
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin-amd64/liarsdeck main.go
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/darwin-amd64/liarsdeck main.go
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/darwin-amd64/update ./cmd/update
           cp -r public dist/darwin-amd64/
           tar -czvf dist/liarsdeck-darwin-amd64.tar.gz -C dist/darwin-amd64 liarsdeck update public
 
           # macOS (Darwin) arm64 (Apple Silicon M1/M2/M3/M4)
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/darwin-arm64/liarsdeck main.go
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/darwin-arm64/liarsdeck main.go
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/darwin-arm64/update ./cmd/update
           cp -r public dist/darwin-arm64/
           tar -czvf dist/liarsdeck-darwin-arm64.tar.gz -C dist/darwin-arm64 liarsdeck update public
