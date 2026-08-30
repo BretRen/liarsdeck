@@ -75,8 +75,24 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return c.JSON(http.StatusOK, map[string]any{
+			"current_version": h.Version,
+			"latest_version":  "暂无 Release",
+			"has_update":      false,
+			"release_name":    "尚未发布 Release 版本",
+			"release_body":    "GitHub 仓库 (BretRen/liarsdeck) 暂未发布任何 Release。\n推送版本 Tag (例如: git tag v2.0.0 && git push origin v2.0.0) 后 GitHub Actions 将自动构建并发布。",
+		})
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return c.JSON(resp.StatusCode, map[string]string{"error": "GitHub API 返回错误"})
+		return c.JSON(http.StatusOK, map[string]any{
+			"current_version": h.Version,
+			"latest_version":  "—",
+			"has_update":      false,
+			"release_name":    fmt.Sprintf("GitHub 响应异常 (HTTP %d)", resp.StatusCode),
+			"release_body":    "可能触发了 GitHub API 访问速率限制，请稍后重试。",
+		})
 	}
 
 	var data map[string]any

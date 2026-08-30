@@ -231,11 +231,6 @@ function onSpectateRoom() {
 
 .room-code-input {
   text-transform: uppercase;
-  letter-spacing: 3px;
-  font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 1.1rem;
-  text-align: center;
 }
 
 .mode-actions {
