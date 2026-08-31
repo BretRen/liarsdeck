@@ -117,22 +117,24 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	r.Game.Lock()
 	isSpectator := action == "spectate"
 
-	// 无论 action 是 reconnect 还是 join，优先通过账号 (p.Nickname == nickname) 或 token 认领断线席位
-	for _, p := range r.Game.State.Players {
-		if (p.Nickname == nickname || (token != "" && p.ID == token)) && p.ClientRef == nil {
-			client := room.NewClient(p.ID, nickname, r, conn)
-			r.AddClient(client)
-			p.ClientRef = client
-			if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
-				r.Game.ResumeGame(p)
-			} else {
-				r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+	// 1. 优先通过 Zitadel 全局唯一 sub (token / p.ID) 认领断线席位
+	if token != "" {
+		for _, p := range r.Game.State.Players {
+			if p.ID == token && p.ClientRef == nil {
+				client := room.NewClient(p.ID, nickname, r, conn)
+				r.AddClient(client)
+				p.ClientRef = client
+				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+					r.Game.ResumeGame(p)
+				} else {
+					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+				}
+				r.Game.Unlock()
+				go client.WritePump()
+				go client.ReadPump()
+				r.Broadcast()
+				return nil
 			}
-			r.Game.Unlock()
-			go client.WritePump()
-			go client.ReadPump()
-			r.Broadcast()
-			return nil
 		}
 	}
 
@@ -143,13 +145,15 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return nil
 	}
 
-	// 检查当前账号是否已在线（防多开挤占）
-	for _, p := range r.Game.State.Players {
-		if p.Nickname == nickname && p.ClientRef != nil {
-			r.Game.Unlock()
-			_ = conn.WriteJSON(map[string]string{"error": "该账号已在房间中 / Account already in room"})
-			_ = conn.Close()
-			return nil
+	// 2. 检查当前 Zitadel 唯一账号 (p.ID == token) 是否已在房间中活跃（防同账号多开）
+	if token != "" {
+		for _, p := range r.Game.State.Players {
+			if p.ID == token && p.ClientRef != nil {
+				r.Game.Unlock()
+				_ = conn.WriteJSON(map[string]string{"error": "该账号已在房间中 / Account already in room"})
+				_ = conn.Close()
+				return nil
+			}
 		}
 	}
 

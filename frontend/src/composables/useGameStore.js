@@ -313,8 +313,14 @@ export function useGameStore() {
 
         const prevStatus = state.value.status;
 
-        if (msg.data.players && myNickname.value) {
-          const me = msg.data.players.find((p) => p.nickname === myNickname.value);
+        if (msg.data.players) {
+          let me = null;
+          if (myPlayerToken.value) {
+            me = msg.data.players.find((p) => p.id === myPlayerToken.value);
+          }
+          if (!me && myNickname.value) {
+            me = msg.data.players.find((p) => p.nickname === myNickname.value);
+          }
           if (me && me.id) {
             myPlayerToken.value = me.id;
             saveSession(msg.data.room_code || myRoomCode.value, me.id, myNickname.value);

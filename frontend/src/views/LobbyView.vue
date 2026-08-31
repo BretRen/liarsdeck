@@ -131,8 +131,9 @@ onMounted(() => {
   const params = new URLSearchParams(window.location.search);
   const room = params.get('room');
   const saved = store.getSavedSession();
+  const sub = user.value?.sub || '';
 
-  if (saved) {
+  if (saved && (!sub || saved.token === sub)) {
     if (!room || saved.roomCode === room.toUpperCase()) {
       roomCodeInput.value = saved.roomCode;
       const playerName = nickname.value || saved.nickname;
@@ -155,32 +156,35 @@ function handleEnter() {
 
 function onCreateRoom() {
   const playerName = nickname.value.trim() || 'Player';
+  const sub = user.value?.sub || '';
   store.clearSession();
-  store.connect('create', '', playerName);
+  store.connect('create', '', playerName, sub);
 }
 
 function onJoinRoom() {
   const playerName = nickname.value.trim() || 'Player';
+  const sub = user.value?.sub || '';
   if (!roomCodeInput.value.trim()) {
     store.showToast(t('err_enter_code'));
     return;
   }
   const code = roomCodeInput.value.trim().toUpperCase();
   const saved = store.getSavedSession();
-  if (saved && saved.roomCode === code) {
+  if (saved && saved.roomCode === code && saved.token === sub) {
     store.connect('reconnect', code, playerName, saved.token);
   } else {
-    store.connect('join', code, playerName);
+    store.connect('join', code, playerName, sub);
   }
 }
 
 function onSpectateRoom() {
   const playerName = nickname.value.trim() || 'Spectator';
+  const sub = user.value?.sub || '';
   if (!roomCodeInput.value.trim()) {
     store.showToast(t('err_enter_code'));
     return;
   }
-  store.connect('spectate', roomCodeInput.value.trim().toUpperCase(), playerName);
+  store.connect('spectate', roomCodeInput.value.trim().toUpperCase(), playerName, sub);
 }
 
 function onLogout() {
