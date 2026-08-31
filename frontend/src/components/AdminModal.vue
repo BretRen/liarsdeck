@@ -290,7 +290,7 @@ async function triggerUpdate() {
       body: JSON.stringify({ secret: savedSecret.value }),
     });
     const data = await res.json();
-    if (res.ok && data.success) {
+    if (res.ok && (data.success || data.status === 'started' || data.status === 'ok')) {
       updateLog.value = `🚀 ${data.message}\n⏳ 服务端正在执行热替换并重启，请在 5-10 秒后刷新网页！`;
       showToast('更新程序已启动！');
     } else {

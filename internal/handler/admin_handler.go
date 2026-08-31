@@ -161,6 +161,7 @@ func (h *AdminHandler) TriggerUpdate(c echo.Context) error {
 	}()
 
 	return c.JSON(http.StatusOK, map[string]any{
+		"success": true,
 		"status":  "started",
 		"message": "已在后台启动下载并热替换更新，预计 3~5 秒内自动重启完成！",
 	})
