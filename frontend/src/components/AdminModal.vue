@@ -177,7 +177,7 @@ const isCheckingAuth = ref(false);
 const secretInput = ref('');
 const savedSecret = ref('');
 
-const currentVersion = ref('v2.2.0');
+const currentVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v2.3.0');
 const latestVersion = ref('');
 const hasUpdate = ref(false);
 const releaseName = ref('');
@@ -194,13 +194,29 @@ const stats = reactive({
   total_players: 0,
 });
 
+async function fetchServerVersion() {
+  try {
+    const res = await fetch('/api/version');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.version) {
+        currentVersion.value = data.version;
+      }
+    }
+  } catch (_) {}
+}
+
 watch(
   () => props.isOpen,
   (val) => {
-    if (val && isAuthenticated.value) {
-      fetchStats();
+    if (val) {
+      fetchServerVersion();
+      if (isAuthenticated.value) {
+        fetchStats();
+      }
     }
-  }
+  },
+  { immediate: true }
 );
 
 async function onLogin() {

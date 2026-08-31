@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -14,7 +16,33 @@ import (
 )
 
 // Version 服务端运行版本号，支持在编译时通过 -ldflags "-X 'pdnode.com/play/liarsbar-web/internal/handler.Version=v...'" 动态注入
-var Version = "v2.0.6"
+var Version = "dev"
+
+// GetVersion 动态获取当前运行版本（优先使用编译时注入的 Version，其次读取 git tag / buildinfo）
+func GetVersion() string {
+	if Version != "" && Version != "dev" && Version != "v2.0.6" {
+		return Version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		if bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+			return bi.Main.Version
+		}
+		for _, s := range bi.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) >= 7 {
+				return "dev-" + s.Value[:7]
+			}
+		}
+	}
+	// 开发态回退：从本地 git 获取最新 tag
+	cmd := exec.Command("git", "describe", "--tags", "--always")
+	if out, err := cmd.Output(); err == nil {
+		tag := strings.TrimSpace(string(out))
+		if tag != "" {
+			return tag
+		}
+	}
+	return "v2.3.0"
+}
 
 type AdminHandler struct {
 	Hub    *room.Hub
@@ -56,7 +84,7 @@ func (h *AdminHandler) Auth(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"authenticated": true,
-		"version":       Version,
+		"version":       GetVersion(),
 	})
 }
 
@@ -79,9 +107,11 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 	}
 	defer resp.Body.Close()
 
+	currVer := GetVersion()
+
 	if resp.StatusCode == http.StatusNotFound {
 		return c.JSON(http.StatusOK, map[string]any{
-			"current_version": Version,
+			"current_version": currVer,
 			"latest_version":  "暂无 Release",
 			"has_update":      false,
 			"release_name":    "尚未发布 Release 版本",
@@ -91,7 +121,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return c.JSON(http.StatusOK, map[string]any{
-			"current_version": Version,
+			"current_version": currVer,
 			"latest_version":  "—",
 			"has_update":      false,
 			"release_name":    fmt.Sprintf("GitHub 响应异常 (HTTP %d)", resp.StatusCode),
@@ -105,10 +135,10 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 	}
 
 	latestTag, _ := data["tag_name"].(string)
-	hasUpdate := latestTag != "" && latestTag != Version
+	hasUpdate := latestTag != "" && latestTag != currVer
 
 	return c.JSON(http.StatusOK, map[string]any{
-		"current_version": Version,
+		"current_version": currVer,
 		"latest_version":  latestTag,
 		"has_update":      hasUpdate,
 		"release_name":    data["name"],

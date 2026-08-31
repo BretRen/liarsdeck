@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"time"
 
@@ -87,6 +88,13 @@ func main() {
 	adminGroup.POST("/broadcast", adminHandler.Broadcast)
 	adminGroup.POST("/stats", adminHandler.GetStats)
 
+	// 公开版本查询 API
+	e.GET("/api/version", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{
+			"version": handler.GetVersion(),
+		})
+	})
+
 	// 静态文件与 SPA 页面托管
 	e.File("/callback", "public/index.html")
 	e.Static("/", "public")
@@ -95,7 +103,7 @@ func main() {
 		return c.File("public/index.html")
 	})
 
-	log.Printf("🃏 Liar's Deck 服务器已启动: http://localhost:%s", port)
+	log.Printf("🃏 Liar's Deck (%s) 服务器已启动: http://localhost:%s", handler.GetVersion(), port)
 	if os.Getenv("ADMIN_SECRET") != "" {
 		log.Printf("🛡️ 管理员接口已启用 (ADMIN_SECRET 已配置)")
 	} else {
