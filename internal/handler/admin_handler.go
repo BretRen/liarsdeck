@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -13,7 +14,7 @@ import (
 )
 
 // Version 服务端运行版本号，支持在编译时通过 -ldflags "-X 'pdnode.com/play/liarsbar-web/internal/handler.Version=v...'" 动态注入
-var Version = "v2.0.1"
+var Version = "v2.0.6"
 
 type AdminHandler struct {
 	Hub    *room.Hub
@@ -160,5 +161,39 @@ func (h *AdminHandler) GetStats(c echo.Context) error {
 		"total_rooms":   totalRooms,
 		"total_players": totalPlayers,
 		"current_time":  time.Now().Format("2006-01-02 15:04:05"),
+	})
+}
+
+func (h *AdminHandler) Broadcast(c echo.Context) error {
+	if h.Secret == "" {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用"})
+	}
+
+	var req struct {
+		Secret  string `json:"secret"`
+		Message string `json:"message"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "请求参数解析失败"})
+	}
+
+	if req.Secret != h.Secret {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+	}
+
+	msg := strings.TrimSpace(req.Message)
+	if msg == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "广播内容不能为空"})
+	}
+
+	roomCount := h.Hub.BroadcastGlobal("server_broadcast", map[string]any{
+		"message":   msg,
+		"timestamp": time.Now().Unix(),
+	})
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"status":     "ok",
+		"message":    fmt.Sprintf("广播已成功推送至全服 %d 个房间！", roomCount),
+		"room_count": roomCount,
 	})
 }

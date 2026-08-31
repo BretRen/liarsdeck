@@ -52,9 +52,18 @@ func secureRandomString(prefix string) string {
 
 func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	action := c.QueryParam("action")
-	code := c.QueryParam("code")
-	nickname := c.QueryParam("name")
-	token := c.QueryParam("token")
+	code := strings.ToUpper(strings.TrimSpace(c.QueryParam("code")))
+	nickname := strings.TrimSpace(c.QueryParam("name"))
+	token := strings.TrimSpace(c.QueryParam("token"))
+
+	// 昵称安全过滤与长度限制 (最多 16 个字符)
+	nickname = strings.ReplaceAll(nickname, "\n", "")
+	nickname = strings.ReplaceAll(nickname, "\r", "")
+	nickname = strings.ReplaceAll(nickname, "\t", "")
+	runeNick := []rune(nickname)
+	if len(runeNick) > 16 {
+		nickname = string(runeNick[:16])
+	}
 
 	if nickname == "" {
 		n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(900))
@@ -66,9 +75,9 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return err
 	}
 
-	clientID := secureRandomString("")
-	if action == "reconnect" && token != "" {
-		clientID = token
+	clientID := token
+	if clientID == "" {
+		clientID = secureRandomString("")
 	}
 
 	if action == "create" {
@@ -105,21 +114,22 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return nil
 	}
 
-	client := room.NewClient(clientID, nickname, r, conn)
-	r.AddClient(client)
-
 	r.Game.Lock()
 	isSpectator := action == "spectate"
 
-	// ---- Reconnect 重连逻辑 ----
-	if action == "reconnect" {
+	// 1. 严格通过唯一 sub / token 认领断线席位（与 nickname 完全解耦）
+	if token != "" {
 		for _, p := range r.Game.State.Players {
 			if p.ID == token && p.ClientRef == nil {
+				// 更新最新 nickname（以防用户修改了昵称）
+				p.Nickname = nickname
+				client := room.NewClient(p.ID, p.Nickname, r, conn)
+				r.AddClient(client)
 				p.ClientRef = client
 				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
 					r.Game.ResumeGame(p)
 				} else {
-					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", nickname, nickname))
+					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", p.Nickname, p.Nickname))
 				}
 				r.Game.Unlock()
 				go client.WritePump()
@@ -128,11 +138,29 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 				return nil
 			}
 		}
+	}
+
+	if action == "reconnect" {
 		r.Game.Unlock()
 		_ = conn.WriteJSON(map[string]string{"error": "无法重连 / Reconnect failed"})
 		_ = conn.Close()
 		return nil
 	}
+
+	// 2. 检查当前唯一账号 (p.ID == token) 是否已在线（防同账号多开，不校验 nickname）
+	if token != "" {
+		for _, p := range r.Game.State.Players {
+			if p.ID == token && p.ClientRef != nil {
+				r.Game.Unlock()
+				_ = conn.WriteJSON(map[string]string{"error": "该账号已在房间中 / Account already in room"})
+				_ = conn.Close()
+				return nil
+			}
+		}
+	}
+
+	client := room.NewClient(clientID, nickname, r, conn)
+	r.AddClient(client)
 
 	// 统计非观战玩家数
 	playerCount := 0

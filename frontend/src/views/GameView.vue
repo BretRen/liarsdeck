@@ -22,7 +22,7 @@
         :key="p.id"
         :player="p"
         :is-active-turn="state.status === 'playing' && state.current_turn === idx"
-        :is-me="p.nickname === myNickname"
+        :is-me="p.id === myId || p.nickname === myNickname"
         :am-host="amHost"
         :game-status="state.status"
         @kick="kickPlayer"
@@ -97,6 +97,7 @@ const {
   currentStep,
   currentStepData,
   myNickname,
+  myId,
   myRoomCode,
   myPlayer,
   myHand,

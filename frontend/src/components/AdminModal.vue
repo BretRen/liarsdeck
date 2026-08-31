@@ -86,7 +86,50 @@
           </div>
         </section>
 
-        <!-- 2. Metrics & Stats Section -->
+        <!-- 2. Server Global Broadcast Section -->
+        <section class="admin-card">
+          <div class="card-header">
+            <h4>{{ t('admin_broadcast_card') }}</h4>
+            <span class="broadcast-badge">LIVE</span>
+          </div>
+
+          <div class="broadcast-form">
+            <textarea
+              v-model="broadcastMsg"
+              rows="2"
+              :placeholder="t('admin_broadcast_ph')"
+              class="broadcast-textarea"
+              :disabled="isBroadcasting"
+            ></textarea>
+
+            <div class="broadcast-presets">
+              <button
+                type="button"
+                class="preset-btn"
+                @click="broadcastMsg = t('admin_broadcast_preset_1')"
+              >
+                🛠️ {{ lang === 'zh' ? '维护预设' : 'Maintenance' }}
+              </button>
+              <button
+                type="button"
+                class="preset-btn"
+                @click="broadcastMsg = t('admin_broadcast_preset_2')"
+              >
+                🎮 {{ lang === 'zh' ? '欢迎预设' : 'Welcome' }}
+              </button>
+            </div>
+
+            <button
+              class="btn-primary full-btn btn-broadcast-send"
+              :disabled="isBroadcasting || !broadcastMsg.trim()"
+              @click="sendBroadcast"
+            >
+              {{ isBroadcasting ? t('admin_broadcast_sending') : t('admin_broadcast_send_btn') }}
+            </button>
+          </div>
+        </section>
+
+        <!-- 3. Metrics & Stats Section -->
         <section class="admin-card">
           <div class="card-header">
             <h4>{{ t('admin_stats_card') }}</h4>
@@ -134,7 +177,7 @@ const isCheckingAuth = ref(false);
 const secretInput = ref('');
 const savedSecret = ref('');
 
-const currentVersion = ref('v2.0.0');
+const currentVersion = ref('v2.0.6');
 const latestVersion = ref('');
 const hasUpdate = ref(false);
 const releaseName = ref('');
@@ -142,6 +185,9 @@ const releaseNotes = ref('');
 const isCheckingUpdate = ref(false);
 const isUpdating = ref(false);
 const updateLog = ref('');
+
+const broadcastMsg = ref('');
+const isBroadcasting = ref(false);
 
 const stats = reactive({
   total_rooms: 0,
@@ -199,25 +245,23 @@ async function checkUpdate() {
       hasUpdate.value = data.has_update;
       releaseName.value = data.release_name || '';
       releaseNotes.value = data.release_body || '';
-      if (data.has_update) {
-        showToast(`发现新版本 ${data.latest_version}`);
-      } else {
+      if (!data.has_update) {
         showToast('当前已是最新版本');
       }
     } else {
-      showToast(data.error || '检查失败');
+      showToast(data.error || '检查更新失败');
     }
   } catch (e) {
-    showToast('网络错误: ' + e.message);
+    showToast('检查更新异常: ' + e.message);
   } finally {
     isCheckingUpdate.value = false;
   }
 }
 
 async function triggerUpdate() {
-  if (!confirm('确认要在后台下载并替换当前服务端进程吗？')) return;
+  if (!confirm('确定要触发服务端自更新并热重启吗？')) return;
   isUpdating.value = true;
-  updateLog.value = '正在触发 update.go 进程...\n';
+  updateLog.value = '⏳ 正在向服务端发送热更新指令...\n';
   try {
     const res = await fetch('/api/admin/trigger-update', {
       method: 'POST',
@@ -226,7 +270,7 @@ async function triggerUpdate() {
     });
     const data = await res.json();
     if (res.ok) {
-      updateLog.value += `✅ ${data.message}\n服务正在后台平滑热替换并重启，请稍候 3~5 秒自动重连...`;
+      updateLog.value += `✅ ${data.message}\n请等待约 3~5 秒后刷新网页连接新版本。`;
       showToast('更新程序已启动');
     } else {
       updateLog.value += `❌ ${data.error}`;
@@ -236,6 +280,32 @@ async function triggerUpdate() {
     updateLog.value += `❌ 请求异常: ${e.message}`;
   } finally {
     isUpdating.value = false;
+  }
+}
+
+async function sendBroadcast() {
+  if (!broadcastMsg.value.trim()) return;
+  isBroadcasting.value = true;
+  try {
+    const res = await fetch('/api/admin/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: savedSecret.value,
+        message: broadcastMsg.value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message || '广播发送成功');
+      broadcastMsg.value = '';
+    } else {
+      showToast(data.error || '广播发送失败');
+    }
+  } catch (e) {
+    showToast('发送异常: ' + e.message);
+  } finally {
+    isBroadcasting.value = false;
   }
 }
 
@@ -272,7 +342,7 @@ async function fetchStats() {
 .admin-modal {
   width: 100%;
   max-width: 540px;
-  max-height: 85vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   background: #141720;
@@ -298,19 +368,18 @@ async function fetchStats() {
 }
 
 .admin-badge {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
+  color: #0b0d13;
+  font-size: 10px;
+  font-weight: 900;
   padding: 2px 6px;
-  background: #3b1414;
-  border: 1px solid #742a2a;
-  color: #ff8787;
-  border-radius: 3px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
-.modal-header h2 {
+.header-left h2 {
   font-size: 1.15rem;
-  color: var(--gold-accent);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -318,10 +387,6 @@ async function fetchStats() {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.lang-btn {
-  font-weight: 700;
 }
 
 .modal-content {
@@ -332,42 +397,72 @@ async function fetchStats() {
   gap: 16px;
 }
 
-/* Auth View */
+/* Auth Box */
 .auth-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
   padding: 20px 10px;
 }
 
 .auth-icon-circle {
-  font-size: 36px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--border-brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+
+.auth-box h3 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+  color: var(--text-primary);
 }
 
 .auth-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  max-width: 360px;
+  margin-bottom: 18px;
+  line-height: 1.4;
 }
 
 .auth-form {
+  width: 100%;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 100%;
-  max-width: 320px;
 }
 
 .secret-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0d0f15;
+  border: 1px solid var(--border-brass);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 14px;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
-/* Dashboard View */
+.secret-input:focus {
+  outline: none;
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* Dashboard Cards */
 .admin-card {
-  background: #0f121a;
-  border: 1px solid var(--border-brass);
+  background: #0d1017;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 14px 16px;
   display: flex;
@@ -379,42 +474,58 @@ async function fetchStats() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
 }
 
 .card-header h4 {
-  font-size: 0.92rem;
+  font-size: 13.5px;
   color: var(--text-primary);
   margin: 0;
 }
 
 .curr-tag {
-  font-family: var(--font-serif);
   font-size: 11px;
-  font-weight: 700;
-  color: var(--gold-accent);
-  background: #1a1e28;
-  padding: 2px 8px;
-  border-radius: 3px;
-  border: 1px solid var(--border-brass);
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.broadcast-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
 .version-meta-grid {
-  display: flex;
-  gap: 20px;
-  font-size: 13px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .meta-item {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
+  background: #141720;
+  padding: 8px 10px;
+  border-radius: 4px;
 }
 
 .meta-label {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
 .meta-val {
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -424,27 +535,27 @@ async function fetchStats() {
 }
 
 .release-notes-box {
-  background: #141720;
+  background: #080a0f;
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   max-height: 120px;
   overflow-y: auto;
 }
 
 .notes-title {
-  font-weight: 700;
   font-size: 12px;
+  font-weight: 700;
   color: var(--gold-accent);
   margin-bottom: 4px;
 }
 
 .notes-body {
-  font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-secondary);
   white-space: pre-wrap;
   margin: 0;
+  font-family: inherit;
 }
 
 .update-actions {
@@ -474,6 +585,66 @@ async function fetchStats() {
   font-size: 11px;
   color: #51cf66;
   white-space: pre-wrap;
+}
+
+/* Broadcast Section */
+.broadcast-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.broadcast-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: #080a0f;
+  border: 1px solid var(--border-brass);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 13px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.broadcast-textarea:focus {
+  outline: none;
+  border-color: var(--gold-accent);
+}
+
+.broadcast-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: var(--gold-accent);
+  color: var(--text-primary);
+}
+
+.btn-broadcast-send {
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  border-color: #f59e0b;
+  color: #fff;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.btn-broadcast-send:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
 }
 
 .stats-grid {

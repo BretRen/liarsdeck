@@ -115,8 +115,8 @@ const dict = {
     // Admin Modal
     admin_title: '管理控制台',
     admin_auth_title: '管理员身份验证 (Ctrl + X)',
-    admin_auth_desc: '请输入管理员密钥以解锁服务端维护与热更新操作：',
-    admin_auth_ph: '输入 ADMIN_SECRET 管理密钥',
+    admin_auth_desc: '请输入管理员密钥以解锁管理控制台：',
+    admin_auth_ph: '输入管理密钥',
     admin_unlock_btn: '解锁管理面板',
     admin_version_card: '系统版本与 GitHub Releases 维护',
     admin_curr_version: '当前版本',
@@ -128,6 +128,23 @@ const dict = {
     admin_active_rooms: '当前活跃房间',
     admin_active_players: '在线玩家总数',
     admin_close_btn: '关闭控制台',
+    admin_broadcast_card: '全服实时广播',
+    admin_broadcast_ph: '输入要向全服所有在线房间广播的内容...',
+    admin_broadcast_send_btn: '发送全服广播',
+    admin_broadcast_sending: '正在发送广播...',
+    admin_broadcast_preset_1: '服务器即将在 5 分钟后进行更新维护，请尽快完成当前对局。',
+    admin_broadcast_preset_2: '欢迎来到 Liar\'s Deck 骗子酒馆！祝各位玩家游戏愉快！',
+    global_broadcast_title: '全服系统公告',
+
+    // Login Modal
+    login_modal_title: "Liar's Deck",
+    login_modal_desc: '请登录后游玩',
+    login_btn: '登录 / Login',
+    login_loading_btn: '正在跳转...',
+    login_secure_tip: '使用 Pdnode Auth 提供保护和身份提供',
+    logout_btn: '登出',
+    logout_confirm: '确定要退出当前账号并登出吗？',
+    logged_in_as: '已登录账号',
 
     // Logs
     battle_log_title: '对局动态',
@@ -251,8 +268,8 @@ const dict = {
     // Admin Modal
     admin_title: 'Admin Console',
     admin_auth_title: 'Admin Authentication (Ctrl + X)',
-    admin_auth_desc: 'Enter your admin secret key to unlock server maintenance & hot updates:',
-    admin_auth_ph: 'Enter ADMIN_SECRET',
+    admin_auth_desc: 'Enter your admin secret key to unlock the admin console:',
+    admin_auth_ph: 'Enter admin secret',
     admin_unlock_btn: 'Unlock Console',
     admin_version_card: 'Version & GitHub Releases Maintenance',
     admin_curr_version: 'Current Version',
@@ -264,6 +281,23 @@ const dict = {
     admin_active_rooms: 'Active Rooms',
     admin_active_players: 'Online Players',
     admin_close_btn: 'Close Console',
+    admin_broadcast_card: 'Server Global Broadcast',
+    admin_broadcast_ph: 'Enter announcement message to broadcast to all active rooms...',
+    admin_broadcast_send_btn: 'Send Global Broadcast',
+    admin_broadcast_sending: 'Broadcasting...',
+    admin_broadcast_preset_1: 'Server will undergo maintenance in 5 minutes. Please conclude current matches.',
+    admin_broadcast_preset_2: 'Welcome to Liar\'s Deck! Best of luck at the tavern tables!',
+    global_broadcast_title: 'SERVER ANNOUNCEMENT',
+
+    // Login Modal
+    login_modal_title: "Liar's Deck",
+    login_modal_desc: 'Please sign in to play',
+    login_btn: 'Login / Sign In',
+    login_loading_btn: 'Redirecting...',
+    login_secure_tip: 'Protected and identity provided by Pdnode Auth',
+    logout_btn: 'Logout',
+    logout_confirm: 'Are you sure you want to sign out?',
+    logged_in_as: 'Signed in as',
 
     // Logs
     battle_log_title: 'Action Log',

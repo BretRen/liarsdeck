@@ -220,7 +220,19 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 	if playerIdx < 0 || playerIdx >= len(g.State.Players) {
 		return false
 	}
+
+	// 如果上家手牌已经出空，下家必须发起质疑，禁止继续出牌
+	if g.State.LastPlayer >= 0 && g.State.LastPlayer < len(g.State.Players) {
+		lastP := g.State.Players[g.State.LastPlayer]
+		if len(lastP.Hand) == 0 {
+			return false
+		}
+	}
+
 	p := g.State.Players[playerIdx]
+	if !p.IsAlive || p.IsSpectator {
+		return false
+	}
 
 	newHand := make([]model.Card, 0, len(p.Hand))
 	used := make([]bool, len(cards))
@@ -265,7 +277,8 @@ func (g *Game) CallLiar(
 	onShot func(target string, fatal bool),
 ) {
 	if callerIdx < 0 || callerIdx >= len(g.State.Players) ||
-		accusedIdx < 0 || accusedIdx >= len(g.State.Players) {
+		accusedIdx < 0 || accusedIdx >= len(g.State.Players) ||
+		callerIdx == accusedIdx || len(g.HiddenCards) == 0 {
 		return
 	}
 
@@ -402,13 +415,40 @@ func (g *Game) ResetGame() {
 	g.State.RemainingTurnSeconds = 0
 	g.HiddenCards = []model.Card{}
 
+	// 仅保留当前处于在线连接状态的玩家，自动清理断线玩家
+	connectedPlayers := make([]*model.Player, 0, len(g.State.Players))
 	for _, p := range g.State.Players {
-		p.Hand = []model.Card{}
-		p.IsReady = false
-		p.IsAlive = true
-		p.Bullets = 6
-		p.Revolver = NewRevolver()
-		p.HasUsedDisconnectGrace = false
+		if p.ClientRef != nil {
+			p.Hand = []model.Card{}
+			p.IsReady = false
+			p.IsAlive = true
+			p.Bullets = 6
+			p.Revolver = NewRevolver()
+			p.HasUsedDisconnectGrace = false
+			connectedPlayers = append(connectedPlayers, p)
+		} else {
+			g.Log(fmt.Sprintf("🧹 清理断线玩家: %s / 🧹 Removed disconnected player: %s", p.Nickname, p.Nickname))
+		}
 	}
+	g.State.Players = connectedPlayers
+
+	// 如果原房主已断线被清理，确保首位在线玩家继承房主身份
+	hasHost := false
+	for _, p := range g.State.Players {
+		if p.IsHost {
+			hasHost = true
+			break
+		}
+	}
+	if !hasHost && len(g.State.Players) > 0 {
+		for _, p := range g.State.Players {
+			if !p.IsSpectator {
+				p.IsHost = true
+				g.Log(fmt.Sprintf("👑 %s 成为新房主 / 👑 %s is the new host", p.Nickname, p.Nickname))
+				break
+			}
+		}
+	}
+
 	g.Log("🔄 游戏已重置，等待玩家准备 / Game reset")
 }

@@ -52,18 +52,16 @@ func NewRevolver() []string {
 }
 
 func DrawTableCard(deck []model.Card) (model.Card, []model.Card) {
-	if len(deck) == 0 {
-		return model.King, deck
+	for i, c := range deck {
+		if c != model.Two {
+			remaining := make([]model.Card, 0, len(deck)-1)
+			remaining = append(remaining, deck[:i]...)
+			remaining = append(remaining, deck[i+1:]...)
+			return c, remaining
+		}
 	}
-	tableCard := deck[0]
-	deck = deck[1:]
-	// 2 作为万能牌不能作为真牌
-	for tableCard == model.Two && len(deck) > 0 {
-		tableCard = deck[0]
-		deck = deck[1:]
+	if len(deck) > 0 {
+		return model.King, deck[1:]
 	}
-	if tableCard == model.Two {
-		tableCard = model.King
-	}
-	return tableCard, deck
+	return model.King, deck
 }

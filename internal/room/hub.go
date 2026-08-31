@@ -67,3 +67,19 @@ func (h *Hub) RemoveRoom(code string) {
 
 	delete(h.Rooms, code)
 }
+
+// BroadcastGlobal 向全服所有房间及在线玩家推送全局广播通知
+func (h *Hub) BroadcastGlobal(eventType string, data any) int {
+	h.mu.Lock()
+	rooms := make([]*Room, 0, len(h.Rooms))
+	for _, r := range h.Rooms {
+		rooms = append(rooms, r)
+	}
+	h.mu.Unlock()
+
+	for _, r := range rooms {
+		r.BroadcastEvent(eventType, data)
+	}
+	return len(rooms)
+}
+

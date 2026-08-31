@@ -39,9 +39,11 @@ const myPlayerToken = ref('');
 const toast = ref('');
 const errorMsg = ref('');
 const pendingState = ref(null);
+const globalBroadcast = ref({ message: '', timestamp: 0, visible: false });
 
 let toastTimer = null;
 let reconnectTimer = null;
+let broadcastTimer = null;
 
 const SESSION_KEY = 'liarsdeck_active_session';
 
@@ -311,8 +313,14 @@ export function useGameStore() {
 
         const prevStatus = state.value.status;
 
-        if (msg.data.players && myNickname.value) {
-          const me = msg.data.players.find((p) => p.nickname === myNickname.value);
+        if (msg.data.players) {
+          let me = null;
+          if (myPlayerToken.value) {
+            me = msg.data.players.find((p) => p.id === myPlayerToken.value);
+          }
+          if (!me && myNickname.value) {
+            me = msg.data.players.find((p) => p.nickname === myNickname.value);
+          }
           if (me && me.id) {
             myPlayerToken.value = me.id;
             saveSession(msg.data.room_code || myRoomCode.value, me.id, myNickname.value);
@@ -347,8 +355,30 @@ export function useGameStore() {
       } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
         eventQueue.value.push({ type: msg.type, data: msg.data });
         processQueue();
+      } else if (msg.type === 'server_broadcast') {
+        if (msg.data && msg.data.message) {
+          showBroadcast(msg.data.message);
+          audio.playLiarAlert();
+        }
       }
     } catch (_) {}
+  }
+
+  function showBroadcast(msgText) {
+    globalBroadcast.value = {
+      message: msgText,
+      timestamp: Date.now(),
+      visible: true,
+    };
+    if (broadcastTimer) clearTimeout(broadcastTimer);
+    broadcastTimer = setTimeout(() => {
+      globalBroadcast.value.visible = false;
+    }, 12000);
+  }
+
+  function dismissBroadcast() {
+    if (broadcastTimer) clearTimeout(broadcastTimer);
+    globalBroadcast.value.visible = false;
   }
 
   // ── Actions ──
@@ -379,7 +409,7 @@ export function useGameStore() {
   function playCards() {
     if (!canPlay.value) return;
     const cards = selectedIndexes.value.map((i) => myHand.value[i]);
-    sendAction('play', { cards });
+    sendAction('play_cards', { cards });
     clearSelection();
   }
 
@@ -481,5 +511,7 @@ export function useGameStore() {
     showToast,
     getSavedSession,
     clearSession,
+    globalBroadcast,
+    dismissBroadcast,
   };
 }

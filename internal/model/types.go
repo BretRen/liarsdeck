@@ -50,9 +50,18 @@ type SafePlayer struct {
 	HasUsedDisconnectGrace bool   `json:"has_used_disconnect_grace"`
 }
 
-func (p *Player) ToSafe() SafePlayer {
-	handCopy := make([]Card, len(p.Hand))
-	copy(handCopy, p.Hand)
+func (p *Player) ToSafe(viewerID string) SafePlayer {
+	var handCopy []Card
+	if viewerID != "" && viewerID == p.ID {
+		handCopy = make([]Card, len(p.Hand))
+		copy(handCopy, p.Hand)
+	} else {
+		// 隐藏对手的手牌内容，仅保留卡牌数量占位符以供 UI 渲染手牌计数，防止抓包作弊
+		handCopy = make([]Card, len(p.Hand))
+		for i := range handCopy {
+			handCopy[i] = "?"
+		}
+	}
 	return SafePlayer{
 		ID:                     p.ID,
 		Nickname:               p.Nickname,
