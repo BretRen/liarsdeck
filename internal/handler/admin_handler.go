@@ -222,6 +222,7 @@ func (h *AdminHandler) Broadcast(c echo.Context) error {
 	})
 
 	return c.JSON(http.StatusOK, map[string]any{
+		"success":    true,
 		"status":     "ok",
 		"message":    fmt.Sprintf("广播已成功推送至全服 %d 个房间！", roomCount),
 		"room_count": roomCount,

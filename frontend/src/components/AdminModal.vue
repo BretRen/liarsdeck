@@ -332,8 +332,8 @@ async function sendBroadcast() {
       }),
     });
     const data = await res.json();
-    if (res.ok && data.success) {
-      showToast(`广播已发送给 ${data.broadcast_count} 个在线房间！`);
+    if (res.ok && (data.success || data.status === 'ok')) {
+      showToast(data.message || `广播已成功推送至全服 ${data.room_count || data.broadcast_count || 0} 个房间！`);
       broadcastMsg.value = '';
     } else {
       showToast(data.error || '广播发送失败');
