@@ -88,28 +88,28 @@ function parseJwt(token) {
   }
 }
 
-// 提取最佳昵称（优先使用 nickname / preferred_username / username，绝不直接使用邮箱地址）
+// 提取最佳昵称（pdnode 标准字段：preferred_username > name > given_name）
 function extractBestNickname(userData = {}, idTokenClaims = {}) {
   const candidates = [
-    userData.nickname,
     userData.preferred_username,
-    userData.username,
-    idTokenClaims.nickname,
     idTokenClaims.preferred_username,
+    userData.nickname,
+    idTokenClaims.nickname,
+    userData.username,
     idTokenClaims.username,
-    userData.given_name,
     userData.name,
     idTokenClaims.name,
+    userData.given_name,
   ];
 
-  // 1. 优先寻找不含 '@' 的有效纯昵称/用户名
+  // 1. 优先寻找不含 '@' 的有效纯用户名
   for (const c of candidates) {
     if (c && typeof c === 'string' && c.trim() && !c.includes('@')) {
       return c.trim();
     }
   }
 
-  // 2. 若字段仅包含邮箱格式，提取 '@' 之前的前缀作为昵称
+  // 2. 若字段为邮箱格式，提取 '@' 之前的前缀作为昵称
   for (const c of candidates) {
     if (c && typeof c === 'string' && c.trim()) {
       if (c.includes('@')) {
@@ -127,7 +127,7 @@ function extractBestNickname(userData = {}, idTokenClaims = {}) {
 }
 
 export function useAuth() {
-  const isAuthenticated = computed(() => !!user.value && (!!user.value.name || !!user.value.nickname));
+  const isAuthenticated = computed(() => !!user.value && (!!user.value.name || !!user.value.preferred_username || !!user.value.sub));
 
   const nickname = computed(() => {
     if (!user.value) return '';
@@ -242,18 +242,20 @@ export function useAuth() {
         });
         if (userRes.ok) {
           userData = await userRes.json();
+          console.log('✅ [pdnode Auth Userinfo]:', userData);
         }
       } catch (_) {}
 
-      // 3. 解析最优实名昵称（避免邮箱作为昵称）
+      // 3. 提取最优实名昵称（强制优先使用 preferred_username）
       const finalNickname = extractBestNickname(userData, idTokenClaims);
 
       const userProfile = {
         sub: userData.sub || idTokenClaims.sub || '',
+        preferred_username: userData.preferred_username || idTokenClaims.preferred_username || '',
         name: finalNickname,
         nickname: userData.nickname || idTokenClaims.nickname || finalNickname,
-        preferred_username: userData.preferred_username || idTokenClaims.preferred_username || '',
-        username: userData.username || idTokenClaims.username || '',
+        given_name: userData.given_name || idTokenClaims.given_name || '',
+        family_name: userData.family_name || idTokenClaims.family_name || '',
         email: userData.email || idTokenClaims.email || '',
         picture: userData.picture || idTokenClaims.picture || '',
       };
