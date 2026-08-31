@@ -117,29 +117,26 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	r.Game.Lock()
 	isSpectator := action == "spectate"
 
-	// 1. 认领断线席位：优先匹配 token (sub ID) 或 登录昵称 (nickname)
-	for _, p := range r.Game.State.Players {
-		isMatch := false
-		if token != "" && p.ID == token {
-			isMatch = true
-		} else if nickname != "" && p.Nickname == nickname {
-			isMatch = true
-		}
-
-		if isMatch && p.ClientRef == nil {
-			client := room.NewClient(p.ID, p.Nickname, r, conn)
-			r.AddClient(client)
-			p.ClientRef = client
-			if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
-				r.Game.ResumeGame(p)
-			} else {
-				r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", p.Nickname, p.Nickname))
+	// 1. 严格通过唯一 sub / token 认领断线席位（与 nickname 完全解耦）
+	if token != "" {
+		for _, p := range r.Game.State.Players {
+			if p.ID == token && p.ClientRef == nil {
+				// 更新最新 nickname（以防用户修改了昵称）
+				p.Nickname = nickname
+				client := room.NewClient(p.ID, p.Nickname, r, conn)
+				r.AddClient(client)
+				p.ClientRef = client
+				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+					r.Game.ResumeGame(p)
+				} else {
+					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", p.Nickname, p.Nickname))
+				}
+				r.Game.Unlock()
+				go client.WritePump()
+				go client.ReadPump()
+				r.Broadcast()
+				return nil
 			}
-			r.Game.Unlock()
-			go client.WritePump()
-			go client.ReadPump()
-			r.Broadcast()
-			return nil
 		}
 	}
 
@@ -150,13 +147,15 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		return nil
 	}
 
-	// 2. 检查当前账号是否已在房间中活跃（防多开挤占）
-	for _, p := range r.Game.State.Players {
-		if ((token != "" && p.ID == token) || p.Nickname == nickname) && p.ClientRef != nil {
-			r.Game.Unlock()
-			_ = conn.WriteJSON(map[string]string{"error": "该账号已在房间中 / Account already in room"})
-			_ = conn.Close()
-			return nil
+	// 2. 检查当前唯一账号 (p.ID == token) 是否已在线（防同账号多开，不校验 nickname）
+	if token != "" {
+		for _, p := range r.Game.State.Players {
+			if p.ID == token && p.ClientRef != nil {
+				r.Game.Unlock()
+				_ = conn.WriteJSON(map[string]string{"error": "该账号已在房间中 / Account already in room"})
+				_ = conn.Close()
+				return nil
+			}
 		}
 	}
 
