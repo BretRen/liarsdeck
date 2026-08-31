@@ -128,6 +128,13 @@ const dict = {
     admin_active_rooms: '当前活跃房间',
     admin_active_players: '在线玩家总数',
     admin_close_btn: '关闭控制台',
+    admin_broadcast_card: '全服实时广播',
+    admin_broadcast_ph: '输入要向全服所有在线房间广播的内容...',
+    admin_broadcast_send_btn: '📢 发送全服广播',
+    admin_broadcast_sending: '正在发送广播...',
+    admin_broadcast_preset_1: '⚡ 服务器即将在 5 分钟后进行更新维护，请尽快完成当前对局。',
+    admin_broadcast_preset_2: '🎮 欢迎来到 Liar\'s Deck 骗子酒馆！祝各位酒客游戏愉快！',
+    global_broadcast_title: '📢 全服系统公告',
 
     // Logs
     battle_log_title: '对局动态',
@@ -264,6 +271,13 @@ const dict = {
     admin_active_rooms: 'Active Rooms',
     admin_active_players: 'Online Players',
     admin_close_btn: 'Close Console',
+    admin_broadcast_card: 'Server Global Broadcast',
+    admin_broadcast_ph: 'Enter announcement message to broadcast to all active rooms...',
+    admin_broadcast_send_btn: '📢 Send Global Broadcast',
+    admin_broadcast_sending: 'Broadcasting...',
+    admin_broadcast_preset_1: '⚡ Server will undergo maintenance in 5 minutes. Please conclude current matches.',
+    admin_broadcast_preset_2: '🎮 Welcome to Liar\'s Deck! Best of luck at the tavern tables!',
+    global_broadcast_title: '📢 SERVER ANNOUNCEMENT',
 
     // Logs
     battle_log_title: 'Action Log',

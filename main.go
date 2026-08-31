@@ -84,6 +84,7 @@ func main() {
 	adminGroup.POST("/auth", adminHandler.Auth)
 	adminGroup.POST("/check-update", adminHandler.CheckUpdate)
 	adminGroup.POST("/trigger-update", adminHandler.TriggerUpdate)
+	adminGroup.POST("/broadcast", adminHandler.Broadcast)
 	adminGroup.POST("/stats", adminHandler.GetStats)
 
 	// 静态文件与 SPA 页面托管

@@ -162,3 +162,28 @@ func (h *AdminHandler) GetStats(c echo.Context) error {
 		"current_time":  time.Now().Format("2006-01-02 15:04:05"),
 	})
 }
+
+func (h *AdminHandler) Broadcast(c echo.Context) error {
+	ok, err := h.checkAuth(c)
+	if err != nil || !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+	}
+
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := c.Bind(&req); err != nil || req.Message == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "广播内容不能为空"})
+	}
+
+	roomCount := h.Hub.BroadcastGlobal("server_broadcast", map[string]any{
+		"message":   req.Message,
+		"timestamp": time.Now().Unix(),
+	})
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"status":     "ok",
+		"message":    "广播已成功推送至全服所有在线房间！",
+		"room_count": roomCount,
+	})
+}

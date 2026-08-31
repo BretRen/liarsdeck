@@ -39,9 +39,11 @@ const myPlayerToken = ref('');
 const toast = ref('');
 const errorMsg = ref('');
 const pendingState = ref(null);
+const globalBroadcast = ref({ message: '', timestamp: 0, visible: false });
 
 let toastTimer = null;
 let reconnectTimer = null;
+let broadcastTimer = null;
 
 const SESSION_KEY = 'liarsdeck_active_session';
 
@@ -347,8 +349,30 @@ export function useGameStore() {
       } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
         eventQueue.value.push({ type: msg.type, data: msg.data });
         processQueue();
+      } else if (msg.type === 'server_broadcast') {
+        if (msg.data && msg.data.message) {
+          showBroadcast(msg.data.message);
+          audio.playLiarAlert();
+        }
       }
     } catch (_) {}
+  }
+
+  function showBroadcast(msgText) {
+    globalBroadcast.value = {
+      message: msgText,
+      timestamp: Date.now(),
+      visible: true,
+    };
+    if (broadcastTimer) clearTimeout(broadcastTimer);
+    broadcastTimer = setTimeout(() => {
+      globalBroadcast.value.visible = false;
+    }, 12000);
+  }
+
+  function dismissBroadcast() {
+    if (broadcastTimer) clearTimeout(broadcastTimer);
+    globalBroadcast.value.visible = false;
   }
 
   // ── Actions ──
@@ -481,5 +505,7 @@ export function useGameStore() {
     showToast,
     getSavedSession,
     clearSession,
+    globalBroadcast,
+    dismissBroadcast,
   };
 }
