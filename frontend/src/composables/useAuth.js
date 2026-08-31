@@ -69,12 +69,71 @@ function getRedirectUri() {
   return 'https://liarsbar.games.pdnode.com/callback';
 }
 
+function parseJwt(token) {
+  try {
+    if (!token || typeof token !== 'string') return {};
+    const parts = token.split('.');
+    if (parts.length < 2) return {};
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (_) {
+    return {};
+  }
+}
+
+// 提取最佳昵称（优先使用 nickname / preferred_username / username，绝不直接使用邮箱地址）
+function extractBestNickname(userData = {}, idTokenClaims = {}) {
+  const candidates = [
+    userData.nickname,
+    userData.preferred_username,
+    userData.username,
+    idTokenClaims.nickname,
+    idTokenClaims.preferred_username,
+    idTokenClaims.username,
+    userData.given_name,
+    userData.name,
+    idTokenClaims.name,
+  ];
+
+  // 1. 优先寻找不含 '@' 的有效纯昵称/用户名
+  for (const c of candidates) {
+    if (c && typeof c === 'string' && c.trim() && !c.includes('@')) {
+      return c.trim();
+    }
+  }
+
+  // 2. 若字段仅包含邮箱格式，提取 '@' 之前的前缀作为昵称
+  for (const c of candidates) {
+    if (c && typeof c === 'string' && c.trim()) {
+      if (c.includes('@')) {
+        return c.split('@')[0].trim();
+      }
+      return c.trim();
+    }
+  }
+
+  if (userData.email && typeof userData.email === 'string') {
+    return userData.email.split('@')[0].trim();
+  }
+
+  return 'Player';
+}
+
 export function useAuth() {
-  const isAuthenticated = computed(() => !!user.value && !!user.value.name);
+  const isAuthenticated = computed(() => !!user.value && (!!user.value.name || !!user.value.nickname));
+
   const nickname = computed(() => {
     if (!user.value) return '';
-    return user.value.nickname || user.value.preferred_username || user.value.name || '';
+    return extractBestNickname(user.value);
   });
+
   const avatar = computed(() => (user.value ? user.value.picture || '' : ''));
 
   async function login() {
@@ -170,27 +229,33 @@ export function useAuth() {
       tokens.value = tokenData;
       localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokenData));
 
+      // 解析 ID Token 中的 Claims
+      const idTokenClaims = parseJwt(tokenData.id_token);
+
       // 2. 拉取 Userinfo
-      const userRes = await fetch(USERINFO_ENDPOINT, {
-        headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
-        },
-      });
+      let userData = {};
+      try {
+        const userRes = await fetch(USERINFO_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+        });
+        if (userRes.ok) {
+          userData = await userRes.json();
+        }
+      } catch (_) {}
 
-      if (!userRes.ok) {
-        throw new Error(`获取用户信息失败: HTTP ${userRes.status}`);
-      }
-
-      const userData = await userRes.json();
-      const finalName = userData.nickname || userData.preferred_username || userData.name || 'Player';
+      // 3. 解析最优实名昵称（避免邮箱作为昵称）
+      const finalNickname = extractBestNickname(userData, idTokenClaims);
 
       const userProfile = {
-        sub: userData.sub,
-        name: finalName,
-        preferred_username: userData.preferred_username || '',
-        nickname: userData.nickname || '',
-        email: userData.email || '',
-        picture: userData.picture || '',
+        sub: userData.sub || idTokenClaims.sub || '',
+        name: finalNickname,
+        nickname: userData.nickname || idTokenClaims.nickname || finalNickname,
+        preferred_username: userData.preferred_username || idTokenClaims.preferred_username || '',
+        username: userData.username || idTokenClaims.username || '',
+        email: userData.email || idTokenClaims.email || '',
+        picture: userData.picture || idTokenClaims.picture || '',
       };
 
       user.value = userProfile;
