@@ -1,17 +1,17 @@
 <template>
-  <div v-if="logs && logs.length" class="log-panel glass-panel">
-    <div class="log-header" @click="isOpen = !isOpen">
-      <div class="log-title">
+  <div v-if="logs && logs.length" class="mt-auto bg-slate-900/80 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg backdrop-blur-md">
+    <div class="flex items-center justify-between px-3.5 py-2 bg-slate-950/70 cursor-pointer select-none border-b border-slate-800" @click="isOpen = !isOpen">
+      <div class="flex items-center gap-1.5 text-xs font-bold text-slate-300 uppercase tracking-wide">
         <span>{{ t('battle_log_title') }}</span>
-        <span class="log-count">({{ logs.length }})</span>
+        <span class="text-slate-500 font-mono">({{ logs.length }})</span>
       </div>
-      <button class="btn-icon collapse-btn">
+      <button class="btn btn-ghost btn-xs h-5 min-h-0 text-slate-400 p-0">
         {{ isOpen ? '▲' : '▼' }}
       </button>
     </div>
 
-    <div v-show="isOpen" ref="logBodyRef" class="log-body">
-      <div v-for="(log, i) in logs" :key="i" class="log-entry">
+    <div v-show="isOpen" ref="logBodyRef" class="p-3 max-h-28 overflow-y-auto font-mono text-[11.5px] leading-relaxed text-slate-400 flex flex-col gap-1">
+      <div v-for="(log, i) in logs" :key="i" class="text-slate-300/90 hover:text-slate-100 transition-colors">
         {{ log }}
       </div>
     </div>
@@ -42,68 +42,3 @@ watch(
   { deep: true }
 );
 </script>
-
-<style scoped>
-.log-panel {
-  background: #10131b;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  margin-top: auto;
-}
-
-.log-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 12px;
-  background: #141822;
-  cursor: pointer;
-  user-select: none;
-}
-
-.log-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.log-count {
-  color: var(--text-muted);
-}
-
-.collapse-btn {
-  font-size: 9px;
-  padding: 2px 6px;
-  background: transparent;
-  border: none;
-}
-
-.log-body {
-  padding: 6px 12px;
-  max-height: 100px;
-  overflow-y: auto;
-  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.log-entry {
-  word-break: break-all;
-}
-
-.log-entry:last-child {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-</style>

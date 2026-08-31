@@ -1,5 +1,5 @@
 <template>
-  <div class="game-view">
+  <div class="flex flex-col min-h-[90vh] max-w-5xl mx-auto w-full">
     <!-- Header Bar -->
     <HeaderBar
       :room-code="state.room_code || myRoomCode"
@@ -11,12 +11,12 @@
     />
 
     <!-- Spectator Banner -->
-    <div v-if="isSpectator" class="spectator-banner glass-panel">
+    <div v-if="isSpectator" class="py-2 px-4 mb-3.5 bg-indigo-950/40 border border-dashed border-indigo-500/40 rounded-xl text-center text-xs text-indigo-300 backdrop-blur-md">
       <span>👀 {{ t('spectator_banner') }}</span>
     </div>
 
     <!-- Players Grid -->
-    <div class="players-container">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
       <PlayerSeat
         v-for="(p, idx) in state.players"
         :key="p.id"
@@ -125,36 +125,3 @@ function onLeave() {
   }
 }
 </script>
-
-<style scoped>
-.game-view {
-  display: flex;
-  flex-direction: column;
-  min-height: 90vh;
-}
-
-.spectator-banner {
-  padding: 8px 16px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px dashed var(--accent-blue);
-  border-radius: var(--radius-md);
-  text-align: center;
-  font-size: 13px;
-  color: #93c5fd;
-  margin-bottom: 14px;
-}
-
-.players-container {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-@media (max-width: 600px) {
-  .players-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-</style>

@@ -1,35 +1,39 @@
 <template>
-  <div class="table-area glass-panel">
+  <div class="flex flex-col items-center justify-center p-5 mb-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/60 backdrop-blur-xl min-h-[190px] gap-3.5">
     <!-- Playing State: Table True Card & Face-down Stack -->
     <template v-if="status === 'playing'">
-      <div class="table-card-section">
-        <div class="table-title">{{ t('table_card_label') }}</div>
+      <div class="flex flex-col items-center gap-1.5">
+        <div class="font-serif text-[11px] font-bold tracking-widest text-indigo-400 uppercase">
+          {{ t('table_card_label') }}
+        </div>
         
-        <div class="true-card-placard">
-          <div class="playing-card true-card" :class="`rank-${tableCard}`">
-            <span class="card-corner">{{ tableCard }}</span>
-            <span class="rank-main">{{ tableCard }}</span>
-            <span class="card-corner-bottom">{{ tableCard }}</span>
-            <div v-if="tableCard === '2'" class="card-wild-badge">WILD</div>
+        <div class="p-1">
+          <div class="w-20 h-28 bg-white border-2 border-indigo-400 rounded-lg shadow-xl shadow-indigo-500/15 flex flex-col justify-between p-2 font-black relative select-none" :class="isRedCard ? 'text-rose-600' : 'text-slate-900'">
+            <span class="text-xs text-left leading-none font-serif">{{ tableCard }}</span>
+            <span class="text-4xl text-center leading-none font-serif">{{ tableCard }}</span>
+            <span class="text-xs text-right leading-none font-serif">{{ tableCard }}</span>
+            <div v-if="tableCard === '2'" class="absolute inset-x-0 bottom-1 mx-auto w-max px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[8px] font-extrabold tracking-widest">
+              WILD
+            </div>
           </div>
         </div>
 
-        <div class="table-tip">{{ t('wild_card_tip') }}</div>
+        <div class="text-xs text-slate-400 font-medium">{{ t('wild_card_tip') }}</div>
       </div>
 
       <!-- Face-down Played Pile -->
-      <div v-if="lastPlayedCnt > 0" class="played-stack-section">
-        <div class="pile-cards">
+      <div v-if="lastPlayedCnt > 0" class="flex flex-col items-center gap-1 mt-1">
+        <div class="flex items-center justify-center h-12">
           <div
             v-for="i in lastPlayedCnt"
             :key="i"
-            class="facedown-card"
+            class="w-9 h-13 bg-indigo-950 border border-indigo-500/40 rounded-sm flex items-center justify-center shadow-lg shadow-black/60 -mx-2 transition-transform p-0.5"
             :style="{ transform: `rotate(${(i - (lastPlayedCnt + 1) / 2) * 6}deg)` }"
           >
-            <div class="card-back-pattern"></div>
+            <div class="w-full h-full border border-dashed border-indigo-400/30 rounded-xs bg-[repeating-linear-gradient(45deg,#1e1b4b,#1e1b4b_2px,#312e81_2px,#312e81_4px)]"></div>
           </div>
         </div>
-        <div class="pile-info">
+        <div class="text-xs font-semibold text-slate-300">
           {{ lastPlayedCnt }} {{ t('cards_on_table') }}
         </div>
       </div>
@@ -37,15 +41,17 @@
 
     <!-- Game Over State: Champion Display -->
     <template v-else-if="status === 'game_over'">
-      <div class="game-over-section">
-        <div class="winner-title">{{ t('winner_label') }}</div>
-        <div class="winner-name">{{ winner || '—' }}</div>
+      <div class="flex flex-col items-center text-center gap-2 py-3">
+        <div class="text-xs font-extrabold text-slate-400 tracking-wider uppercase">{{ t('winner_label') }}</div>
+        <div class="text-4xl font-black font-serif text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-300 to-indigo-400 drop-shadow-[0_0_25px_rgba(99,102,241,0.5)]">
+          {{ winner || '—' }}
+        </div>
 
-        <div class="game-over-actions">
-          <button v-if="amHost" class="btn-primary btn-lg" @click="$emit('reset')">
+        <div class="mt-3">
+          <button v-if="amHost" class="btn btn-primary px-8 h-11 text-sm font-bold shadow-lg shadow-indigo-600/30 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white" @click="$emit('reset')">
             {{ t('play_again_btn') }}
           </button>
-          <p v-else class="wait-host-text">
+          <p v-else class="text-xs text-slate-400">
             {{ t('wait_host_reset') }}
           </p>
         </div>
@@ -55,9 +61,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from '../composables/useI18n';
 
-defineProps({
+const props = defineProps({
   status: { type: String, default: 'waiting' },
   tableCard: { type: String, default: '' },
   lastPlayedCnt: { type: Number, default: 0 },
@@ -67,143 +74,6 @@ defineProps({
 
 defineEmits(['reset']);
 const { t } = useI18n();
+
+const isRedCard = computed(() => props.tableCard === 'Q' || props.tableCard === '2');
 </script>
-
-<style scoped>
-.table-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  margin-bottom: 14px;
-  background: #11141c;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  min-height: 180px;
-  gap: 14px;
-}
-
-.table-card-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.table-title {
-  font-family: var(--font-serif);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--gold-accent);
-  text-transform: uppercase;
-}
-
-.true-card-placard {
-  padding: 4px;
-}
-
-.true-card {
-  width: 76px;
-  height: 110px;
-  font-size: 32px;
-  border-width: 2px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(212, 175, 55, 0.3);
-  cursor: default;
-  transform: none !important;
-}
-
-.table-tip {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* Face-down stack */
-.played-stack-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.pile-cards {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-}
-
-.facedown-card {
-  width: 36px;
-  height: 50px;
-  background: #2b1810;
-  border: 1.5px solid #543324;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  margin: 0 -8px;
-  padding: 3px;
-}
-
-.card-back-pattern {
-  width: 100%;
-  height: 100%;
-  border: 1px dashed rgba(212, 175, 55, 0.4);
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(0,0,0,0.1),
-    rgba(0,0,0,0.1) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-}
-
-.pile-info {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-/* Game Over */
-.game-over-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-}
-
-.winner-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.winner-name {
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--gold-accent);
-  text-shadow: 0 0 20px var(--gold-glow);
-}
-
-.game-over-actions {
-  margin-top: 8px;
-}
-
-.btn-lg {
-  padding: 11px 26px;
-  font-size: 14px;
-}
-
-.wait-host-text {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-</style>

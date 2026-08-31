@@ -1,51 +1,53 @@
 <template>
-  <div v-if="currentStep" class="event-overlay" :class="currentStep">
+  <div v-if="currentStep" class="fixed inset-0 z-[1500] flex items-center justify-center p-5 backdrop-blur-md animate-in fade-in duration-200" :class="overlayBg">
     <!-- Muzzle Flash on fatal shot -->
-    <div v-if="currentStep === 'shot' && stepData.fatal" class="muzzle-flash"></div>
+    <div v-if="currentStep === 'shot' && stepData.fatal" class="fixed inset-0 bg-rose-600/30 z-[1501] pointer-events-none animate-ping"></div>
 
-    <div class="event-card glass-panel" :class="{ shake: currentStep === 'shot' && stepData.fatal }">
+    <div class="card w-full max-w-md p-7 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl shadow-black/80 flex flex-col items-center text-center gap-3.5" :class="{ 'animate-bounce': currentStep === 'shot' && stepData.fatal }">
       <!-- 1. Liar Call Step -->
       <template v-if="currentStep === 'liar_call'">
-        <div class="event-badge pulse-liar">CHALLENGE</div>
-        <h2 class="event-title">{{ t('event_liar_alert') }}</h2>
-        <div class="call-details">
-          <span class="highlight caller">{{ stepData.caller }}</span>
-          <span class="claim-text">{{ t('event_calls_out') }}</span>
-          <span class="highlight accused">{{ stepData.accused }}</span>
-          <span class="claim-text">{{ t('event_liar_claim') }}</span>
+        <div class="badge badge-error badge-sm font-extrabold tracking-widest uppercase py-1 px-3">CHALLENGE</div>
+        <h2 class="text-2xl font-black font-serif text-slate-100 tracking-wide">{{ t('event_liar_alert') }}</h2>
+        <div class="text-sm md:text-base text-slate-300 flex items-center justify-center gap-1.5 flex-wrap">
+          <span class="font-bold text-sky-400">{{ stepData.caller }}</span>
+          <span>{{ t('event_calls_out') }}</span>
+          <span class="font-bold text-rose-400">{{ stepData.accused }}</span>
+          <span>{{ t('event_liar_claim') }}</span>
         </div>
       </template>
 
       <!-- 2. Reveal Cards Step -->
       <template v-if="currentStep === 'reveal'">
-        <div class="event-badge">VERIFICATION</div>
-        <h2 class="event-title">{{ stepData.accused }} - {{ t('event_cards_revealed') }}</h2>
-        <div class="revealed-cards-row">
+        <div class="badge badge-info badge-sm font-extrabold tracking-widest uppercase py-1 px-3">VERIFICATION</div>
+        <h2 class="text-xl font-bold font-serif text-slate-100 tracking-wide">{{ stepData.accused }} - {{ t('event_cards_revealed') }}</h2>
+        <div class="flex gap-2.5 justify-center mt-2 flex-wrap">
           <div
             v-for="(card, i) in stepData.cards"
             :key="i"
-            class="playing-card reveal-card"
-            :class="`rank-${card}`"
+            class="playing-card w-[68px] h-[98px] bg-white border border-slate-300 rounded-lg shadow-xl flex flex-col justify-between p-1.5 font-serif font-black select-none animate-in zoom-in spin-in-12 duration-300"
+            :class="card === 'Q' || card === '2' ? 'text-rose-600' : 'text-slate-900'"
             :style="{ animationDelay: `${i * 0.12}s` }"
           >
-            <span class="card-corner">{{ card }}</span>
-            <span class="rank-main">{{ card }}</span>
-            <span class="card-corner-bottom">{{ card }}</span>
-            <div v-if="card === '2'" class="card-wild-badge">WILD</div>
+            <span class="text-[10px] text-left leading-none">{{ card }}</span>
+            <span class="text-3xl text-center leading-none">{{ card }}</span>
+            <span class="text-[10px] text-right leading-none">{{ card }}</span>
+            <div v-if="card === '2'" class="absolute inset-x-0 bottom-1 mx-auto w-max px-1 bg-indigo-600 text-white rounded text-[7px] font-extrabold tracking-widest">
+              WILD
+            </div>
           </div>
         </div>
       </template>
 
       <!-- 3. Shot Step -->
       <template v-if="currentStep === 'shot'">
-        <div class="event-badge" :class="{ 'badge-fatal': stepData.fatal, 'badge-blank': !stepData.fatal }">
+        <div class="badge badge-sm font-extrabold tracking-widest uppercase py-1 px-3" :class="stepData.fatal ? 'badge-error text-white' : 'badge-success text-white'">
           {{ stepData.fatal ? 'FATAL ROUND' : 'DRY FIRE' }}
         </div>
-        <h2 class="event-title" :class="{ fatal: stepData.fatal, blank: !stepData.fatal }">
+        <h2 class="text-2xl font-black font-serif tracking-wide" :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]'">
           {{ stepData.fatal ? t('event_bang_title') : t('event_click_title') }}
         </h2>
-        <p class="shot-sub">
-          <span class="highlight">{{ stepData.target }}</span>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          <span class="font-bold text-slate-100">{{ stepData.target }}</span>
           {{ stepData.fatal ? t('event_bang_sub') : t('event_click_sub') }}
         </p>
       </template>
@@ -54,151 +56,20 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from '../composables/useI18n';
 
-defineProps({
+const props = defineProps({
   currentStep: { type: String, default: '' },
   stepData: { type: Object, default: () => ({}) },
 });
 
 const { t } = useI18n();
+
+const overlayBg = computed(() => {
+  if (props.currentStep === 'liar_call') return 'bg-rose-950/70';
+  if (props.currentStep === 'reveal') return 'bg-slate-950/80';
+  if (props.currentStep === 'shot') return props.stepData.fatal ? 'bg-rose-950/85' : 'bg-slate-950/85';
+  return 'bg-slate-950/75';
+});
 </script>
-
-<style scoped>
-.event-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  backdrop-filter: blur(8px);
-  animation: fadeIn 0.2s ease;
-}
-
-.event-overlay.liar_call {
-  background: rgba(43, 10, 10, 0.7);
-}
-
-.event-overlay.reveal {
-  background: rgba(13, 15, 20, 0.8);
-}
-
-.event-overlay.shot {
-  background: rgba(5, 6, 8, 0.85);
-}
-
-.event-card {
-  width: 100%;
-  max-width: 440px;
-  padding: 28px 24px;
-  background: #141720;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
-}
-
-.event-badge {
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  background: #2b1414;
-  border: 1px solid #742a2a;
-  color: #ff8787;
-}
-
-.badge-fatal {
-  background: #3b1010;
-  border-color: #e03131;
-  color: #ffffff;
-}
-
-.badge-blank {
-  background: rgba(43, 138, 62, 0.25);
-  border-color: #2b8a3e;
-  color: #51cf66;
-}
-
-.event-title {
-  font-family: var(--font-serif);
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.event-title.fatal {
-  color: #ff8787;
-  text-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
-}
-
-.event-title.blank {
-  color: #51cf66;
-  text-shadow: 0 0 16px rgba(81, 207, 102, 0.5);
-}
-
-.call-details {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.highlight {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.highlight.caller {
-  color: #748ffc;
-}
-
-.highlight.accused {
-  color: #ff8787;
-}
-
-/* Revealed cards */
-.revealed-cards-row {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 6px;
-}
-
-.reveal-card {
-  width: 70px;
-  height: 102px;
-  font-size: 28px;
-  cursor: default;
-  transform: none;
-  animation: cardFlip 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-
-@keyframes cardFlip {
-  0% { transform: scale(0.6) rotateY(90deg); opacity: 0; }
-  100% { transform: scale(1) rotateY(0deg); opacity: 1; }
-}
-
-.shot-sub {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-</style>

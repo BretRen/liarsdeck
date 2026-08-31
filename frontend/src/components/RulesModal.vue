@@ -1,72 +1,72 @@
 <template>
-  <div class="rules-modal-overlay" @click.self="$emit('close')">
-    <div class="rules-modal glass-panel">
-      <div class="modal-header">
-        <h2 class="font-serif">{{ t('rules_title') }}</h2>
-        <button class="btn-icon" @click="$emit('close')">✕</button>
+  <div class="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200" @click.self="$emit('close')">
+    <div class="card w-full max-w-lg bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl shadow-black/80 flex flex-col max-h-[85vh] overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
+        <h2 class="text-xl font-bold font-serif text-slate-100 tracking-wide">{{ t('rules_title') }}</h2>
+        <button class="btn btn-ghost btn-xs w-7 h-7 rounded-full text-slate-400 hover:text-white p-0" @click="$emit('close')">✕</button>
       </div>
 
-      <div class="modal-content">
-        <section class="rule-block">
-          <div class="rule-title">
-            <span class="rule-num">01</span>
-            <h3>{{ t('rule_goal_title') }}</h3>
+      <div class="p-6 overflow-y-auto flex flex-col gap-5 text-left text-sm text-slate-300">
+        <section class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-black text-indigo-400 bg-indigo-950/80 border border-indigo-500/40 px-1.5 py-0.5 rounded">01</span>
+            <h3 class="font-bold text-slate-100">{{ t('rule_goal_title') }}</h3>
           </div>
-          <p>{{ t('rule_goal_desc') }}</p>
+          <p class="text-slate-400 text-xs leading-relaxed pl-7">{{ t('rule_goal_desc') }}</p>
         </section>
 
-        <section class="rule-block">
-          <div class="rule-title">
-            <span class="rule-num">02</span>
-            <h3>{{ t('rule_deck_title') }}</h3>
+        <section class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-black text-indigo-400 bg-indigo-950/80 border border-indigo-500/40 px-1.5 py-0.5 rounded">02</span>
+            <h3 class="font-bold text-slate-100">{{ t('rule_deck_title') }}</h3>
           </div>
-          <p>{{ t('rule_deck_desc') }}</p>
-          <div class="cards-preview">
-            <div class="preview-card rank-K">K (King)</div>
-            <div class="preview-card rank-Q">Q (Queen)</div>
-            <div class="preview-card rank-A">A (Ace)</div>
-            <div class="preview-card rank-2">2 (Wild)</div>
+          <p class="text-slate-400 text-xs leading-relaxed pl-7 mb-2">{{ t('rule_deck_desc') }}</p>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pl-7">
+            <div class="p-2 text-center rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-bold text-slate-200">K (King)</div>
+            <div class="p-2 text-center rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-bold text-rose-400">Q (Queen)</div>
+            <div class="p-2 text-center rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-bold text-slate-200">A (Ace)</div>
+            <div class="p-2 text-center rounded-lg bg-indigo-950/80 border border-indigo-500/50 text-xs font-bold text-indigo-300">2 (Wild)</div>
           </div>
         </section>
 
-        <section class="rule-block">
-          <div class="rule-title">
-            <span class="rule-num">03</span>
-            <h3>{{ t('rule_turn_title') }}</h3>
+        <section class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-black text-indigo-400 bg-indigo-950/80 border border-indigo-500/40 px-1.5 py-0.5 rounded">03</span>
+            <h3 class="font-bold text-slate-100">{{ t('rule_turn_title') }}</h3>
           </div>
-          <ul>
+          <ul class="list-disc list-inside text-slate-400 text-xs leading-relaxed pl-7 flex flex-col gap-1">
             <li>{{ t('rule_turn_1') }}</li>
             <li>{{ t('rule_turn_2') }}</li>
             <li>{{ t('rule_turn_3') }}</li>
           </ul>
         </section>
 
-        <section class="rule-block">
-          <div class="rule-title">
-            <span class="rule-num">04</span>
-            <h3>{{ t('rule_liar_title') }}</h3>
+        <section class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-black text-indigo-400 bg-indigo-950/80 border border-indigo-500/40 px-1.5 py-0.5 rounded">04</span>
+            <h3 class="font-bold text-slate-100">{{ t('rule_liar_title') }}</h3>
           </div>
-          <ul>
+          <ul class="list-disc list-inside text-slate-400 text-xs leading-relaxed pl-7 flex flex-col gap-1">
             <li>{{ t('rule_liar_1') }}</li>
             <li>{{ t('rule_liar_2') }}</li>
             <li>{{ t('rule_liar_3') }}</li>
           </ul>
         </section>
 
-        <section class="rule-block">
-          <div class="rule-title">
-            <span class="rule-num">05</span>
-            <h3>{{ t('rule_gun_title') }}</h3>
+        <section class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-black text-indigo-400 bg-indigo-950/80 border border-indigo-500/40 px-1.5 py-0.5 rounded">05</span>
+            <h3 class="font-bold text-slate-100">{{ t('rule_gun_title') }}</h3>
           </div>
-          <ul>
+          <ul class="list-disc list-inside text-slate-400 text-xs leading-relaxed pl-7 flex flex-col gap-1">
             <li>{{ t('rule_gun_1') }}</li>
             <li>{{ t('rule_gun_2') }}</li>
           </ul>
         </section>
       </div>
 
-      <div class="modal-footer">
-        <button class="btn-primary full-width" @click="$emit('close')">
+      <div class="p-4 bg-slate-950/70 border-t border-slate-800">
+        <button class="btn btn-primary w-full font-bold shadow-lg shadow-indigo-600/30 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white" @click="$emit('close')">
           {{ t('rule_got_it') }}
         </button>
       </div>
@@ -80,132 +80,3 @@ import { useI18n } from '../composables/useI18n';
 defineEmits(['close']);
 const { t } = useI18n();
 </script>
-
-<style scoped>
-.rules-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  animation: fadeIn 0.2s ease;
-}
-
-.rules-modal {
-  width: 100%;
-  max-width: 520px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  background: #141720;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-brass);
-  background: #10131a;
-}
-
-.modal-header h2 {
-  font-size: 1.1rem;
-  color: var(--gold-accent);
-  margin: 0;
-}
-
-.modal-content {
-  padding: 18px 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.rule-block {
-  background: #0f1218;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-}
-
-.rule-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.rule-num {
-  font-family: var(--font-serif);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gold-accent);
-  border: 1px solid var(--border-brass);
-  padding: 1px 5px;
-  border-radius: 2px;
-  background: #181d28;
-}
-
-.rule-title h3 {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.rule-block p, .rule-block li {
-  font-size: 0.86rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.rule-block ul {
-  padding-left: 18px;
-  margin-top: 4px;
-}
-
-.cards-preview {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-
-.preview-card {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 12px;
-  border: 1px solid;
-}
-
-.preview-card.rank-K { color: #1a1a1a; border-color: #d9d2c5; background: #fbf8f2; }
-.preview-card.rank-Q { color: #991b1b; border-color: #fca5a5; background: #fbf8f2; }
-.preview-card.rank-A { color: #1a1a1a; border-color: #d9d2c5; background: #fbf8f2; }
-.preview-card.rank-2 { color: #065f46; border-color: #059669; background: #f0fdf4; }
-
-.modal-footer {
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-brass);
-  background: #10131a;
-}
-
-.full-width {
-  width: 100%;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-</style>
