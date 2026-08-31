@@ -1,41 +1,41 @@
 <template>
-  <div class="action-bar glass-panel">
+  <div class="p-3 mb-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-xl shadow-black/50 backdrop-blur-xl flex items-center justify-center min-h-[64px]">
     <!-- Waiting Phase -->
     <template v-if="status === 'waiting'">
-      <div v-if="isPlayer" class="action-group">
-        <button class="btn-primary" @click="$emit('toggle-ready')">
+      <div v-if="isPlayer" class="flex items-center gap-3 flex-wrap justify-center">
+        <button class="btn btn-sm md:btn-md btn-primary px-6 font-bold shadow-lg shadow-indigo-600/30 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white" @click="$emit('toggle-ready')">
           {{ isReady ? t('unready_btn') : t('ready_btn') }}
         </button>
 
         <button
-          class="btn-success"
+          class="btn btn-sm md:btn-md btn-success px-6 font-bold text-white shadow-lg shadow-emerald-600/30 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-none disabled:opacity-40"
           :disabled="!canStart"
           @click="$emit('start-game')"
           v-if="amHost"
         >
           {{ t('start_game_btn') }}
-          <span v-if="!canStart" class="btn-subtip">
+          <span v-if="!canStart" class="text-[10px] font-normal opacity-80">
             ({{ allReady ? t('need_more_players') : t('all_ready_needed') }})
           </span>
         </button>
       </div>
 
-      <div v-else class="status-hint">
+      <div v-else class="text-xs text-slate-400 font-medium">
         <span>{{ t('spectator_banner') }}</span>
       </div>
     </template>
 
     <!-- Playing Phase -->
     <template v-else-if="status === 'playing'">
-      <div v-if="isPlayer && isMyTurn" class="action-group">
+      <div v-if="isPlayer && isMyTurn" class="flex items-center gap-3 flex-wrap justify-center">
         <!-- Turn Timer Badge inside Action Bar -->
-        <div v-if="remainingSeconds > 0" class="action-timer" :class="{ urgent: remainingSeconds <= 8 }">
-          <span class="timer-label">{{ t('timeout_warn') }}:</span>
-          <span class="timer-val">{{ remainingSeconds }}s</span>
+        <div v-if="remainingSeconds > 0" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono font-bold text-xs" :class="remainingSeconds <= 8 ? 'bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse' : 'bg-slate-950/80 border-indigo-500/40 text-indigo-300'">
+          <span class="text-[11px] uppercase tracking-wider text-slate-400">{{ t('timeout_warn') }}:</span>
+          <span class="text-sm font-extrabold">{{ remainingSeconds }}s</span>
         </div>
 
         <button
-          class="btn-primary btn-play"
+          class="btn btn-sm md:btn-md btn-primary px-6 font-bold shadow-lg shadow-indigo-600/30 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white disabled:opacity-40"
           :disabled="!canPlay"
           @click="$emit('play-cards')"
         >
@@ -43,8 +43,8 @@
         </button>
 
         <button
-          class="btn-danger btn-liar"
-          :class="{ 'pulse-liar': canCallLiar }"
+          class="btn btn-sm md:btn-md btn-error px-6 font-bold shadow-lg shadow-rose-600/30 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 border-none text-white disabled:opacity-40"
+          :class="{ 'animate-bounce': canCallLiar }"
           :disabled="!canCallLiar"
           @click="$emit('call-liar')"
         >
@@ -52,8 +52,8 @@
         </button>
       </div>
 
-      <div v-else class="status-hint">
-        <span class="pulse-dot"></span>
+      <div v-else class="flex items-center gap-2 text-xs text-slate-400 font-medium">
+        <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
         <span v-if="isPlayer">{{ t('status_playing') }} ({{ t('status_waiting') }})</span>
         <span v-else>{{ t('spectator_banner') }}</span>
       </div>
@@ -85,95 +85,3 @@ const store = useGameStore();
 
 const remainingSeconds = computed(() => store.remainingSeconds.value);
 </script>
-
-<style scoped>
-.action-bar {
-  padding: 12px 18px;
-  margin-bottom: 14px;
-  background: #141720;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64px;
-}
-
-.action-group {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.action-group button {
-  flex: 1;
-  min-width: 140px;
-  max-width: 260px;
-  padding: 11px 18px;
-  font-size: 14px;
-}
-
-.action-timer {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  background: #0f121a;
-  border: 1px solid var(--border-brass);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gold-accent);
-}
-
-.action-timer.urgent {
-  background: #2b1414;
-  border-color: #821c1c;
-  color: #ff8787;
-  animation: pulseRed 1s infinite;
-}
-
-.timer-val {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.btn-subtip {
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-.btn-liar {
-  font-family: var(--font-serif);
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-
-.status-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--gold-accent);
-  box-shadow: 0 0 8px var(--gold-accent);
-  animation: pulseGold 1.5s infinite;
-}
-
-@keyframes pulseGold {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-</style>

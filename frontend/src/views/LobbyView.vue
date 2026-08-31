@@ -1,53 +1,58 @@
 <template>
-  <div class="lobby-view">
+  <div class="min-h-[85vh] flex flex-col items-center justify-center p-5 relative">
     <!-- Top Bar Controls -->
-    <div class="lobby-topbar">
+    <div class="absolute top-3 right-3 flex items-center gap-2 z-10">
       <!-- User Profile Pill -->
-      <div v-if="isAuthenticated && user" class="user-pill glass-panel">
-        <img v-if="avatar" :src="avatar" alt="Avatar" class="user-avatar" />
-        <div v-else class="user-avatar-placeholder">👤</div>
-        <span class="user-name">{{ nickname }}</span>
-        <button class="btn-logout" :title="t('logout_btn')" @click="onLogout">
+      <div v-if="isAuthenticated && user" class="flex items-center gap-2 px-3 py-1.5 bg-slate-900/80 border border-slate-700/60 rounded-full shadow-md backdrop-blur-md">
+        <img v-if="avatar" :src="avatar" alt="Avatar" class="w-5 h-5 rounded-full object-cover ring-1 ring-indigo-500/50" />
+        <div v-else class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">👤</div>
+        <span class="text-xs font-bold text-slate-200 max-w-[120px] truncate">{{ nickname }}</span>
+        <button class="btn btn-ghost btn-xs text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-1.5 h-6 min-h-0" :title="t('logout_btn')" @click="onLogout">
           {{ t('logout_btn') }}
         </button>
       </div>
 
-      <button class="btn-icon" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
+      <button class="btn btn-sm btn-ghost bg-slate-900/70 border border-slate-700/60 text-slate-300 hover:bg-slate-800" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
         {{ audio.isMuted.value ? 'Muted' : 'Sound' }}
       </button>
-      <button class="btn-icon lang-btn" @click="toggleLang">
+      <button class="btn btn-sm btn-ghost bg-slate-900/70 border border-slate-700/60 text-slate-300 hover:bg-slate-800" @click="toggleLang">
         {{ lang.toUpperCase() }}
       </button>
     </div>
 
-    <div class="lobby-hero">
-      <h1 class="hero-title font-serif">Liar's Deck</h1>
-      <p class="hero-subtitle">{{ t('app_subtitle') }}</p>
+    <!-- Hero Title -->
+    <div class="text-center mb-8">
+      <h1 class="text-5xl md:text-6xl font-black font-serif text-slate-100 tracking-wider drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] mb-2">
+        Liar's Deck
+      </h1>
+      <p class="text-xs md:text-sm text-slate-400 tracking-wide">{{ t('app_subtitle') }}</p>
     </div>
 
-    <!-- Main Card Box -->
-    <div class="lobby-card glass-panel">
+    <!-- Main Card Box (DaisyUI Card) -->
+    <div class="card w-full max-w-sm bg-slate-900/80 border border-slate-800/80 shadow-2xl shadow-black/80 backdrop-blur-xl rounded-2xl p-6 flex flex-col gap-4">
       <!-- Verified Nickname Badge -->
-      <div class="form-group">
-        <label>{{ t('nickname') }}</label>
-        <div class="verified-nickname-box">
-          <span class="verified-icon">🔒</span>
-          <span class="verified-name">{{ nickname || 'Player' }}</span>
-          <span class="verified-tag">AUTHENTICATED</span>
+      <div class="flex flex-col gap-1.5 text-left">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('nickname') }}</label>
+        <div class="flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-lg px-3.5 h-11">
+          <span class="text-xs text-indigo-400">🔒</span>
+          <span class="flex-1 text-sm font-bold text-slate-100 truncate">{{ nickname || 'Player' }}</span>
+          <span class="badge badge-sm badge-neutral border-indigo-500/30 text-indigo-300 text-[9px] font-extrabold tracking-wider">
+            AUTHENTICATED
+          </span>
         </div>
       </div>
 
       <!-- Mode 1: Create -->
       <template v-if="mode === 'create'">
-        <div class="mode-actions">
-          <button class="btn-primary full-btn" @click="onCreateRoom">
+        <div class="flex flex-col gap-2.5 mt-1">
+          <button class="btn btn-primary w-full h-11 font-bold tracking-wide shadow-lg shadow-indigo-600/25 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white transition-all active:scale-[0.98]" @click="onCreateRoom">
             {{ t('lobby_create_title') }}
           </button>
-          <div class="sub-actions">
-            <button class="btn-secondary flex-1" @click="mode = 'join'">
+          <div class="flex gap-2">
+            <button class="btn btn-neutral flex-1 h-10 min-h-0 bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 font-semibold" @click="mode = 'join'">
               {{ t('join_btn') }}
             </button>
-            <button class="btn-secondary flex-1" @click="mode = 'spectate'">
+            <button class="btn btn-neutral flex-1 h-10 min-h-0 bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 font-semibold" @click="mode = 'spectate'">
               {{ t('spectate_btn') }}
             </button>
           </div>
@@ -56,23 +61,23 @@
 
       <!-- Mode 2: Join with Code -->
       <template v-else-if="mode === 'join'">
-        <div class="form-group">
-          <label>{{ t('room_code') }}</label>
+        <div class="flex flex-col gap-1.5 text-left">
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('room_code') }}</label>
           <input
             v-model="roomCodeInput"
             type="text"
             :placeholder="t('room_code_ph')"
             maxlength="6"
-            class="room-code-input"
+            class="input input-bordered w-full h-11 text-center font-bold tracking-widest text-base bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 uppercase"
             @input="roomCodeInput = roomCodeInput.toUpperCase()"
             @keyup.enter="onJoinRoom"
           />
         </div>
-        <div class="mode-actions">
-          <button class="btn-primary full-btn" @click="onJoinRoom">
+        <div class="flex flex-col gap-2.5 mt-1">
+          <button class="btn btn-primary w-full h-11 font-bold tracking-wide shadow-lg shadow-indigo-600/25 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white" @click="onJoinRoom">
             {{ t('join_btn') }}
           </button>
-          <button class="btn-secondary full-btn" @click="mode = 'create'">
+          <button class="btn btn-neutral w-full h-10 min-h-0 bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 font-semibold" @click="mode = 'create'">
             ← {{ t('back') }}
           </button>
         </div>
@@ -80,23 +85,23 @@
 
       <!-- Mode 3: Spectate with Code -->
       <template v-else-if="mode === 'spectate'">
-        <div class="form-group">
-          <label>{{ t('room_code') }}</label>
+        <div class="flex flex-col gap-1.5 text-left">
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ t('room_code') }}</label>
           <input
             v-model="roomCodeInput"
             type="text"
             :placeholder="t('room_code_ph')"
             maxlength="6"
-            class="room-code-input"
+            class="input input-bordered w-full h-11 text-center font-bold tracking-widest text-base bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 uppercase"
             @input="roomCodeInput = roomCodeInput.toUpperCase()"
             @keyup.enter="onSpectateRoom"
           />
         </div>
-        <div class="mode-actions">
-          <button class="btn-primary full-btn" @click="onSpectateRoom">
+        <div class="flex flex-col gap-2.5 mt-1">
+          <button class="btn btn-primary w-full h-11 font-bold tracking-wide shadow-lg shadow-indigo-600/25 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-none text-white" @click="onSpectateRoom">
             {{ t('spectate_btn') }}
           </button>
-          <button class="btn-secondary full-btn" @click="mode = 'create'">
+          <button class="btn btn-neutral w-full h-10 min-h-0 bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 font-semibold" @click="mode = 'create'">
             ← {{ t('back') }}
           </button>
         </div>
@@ -104,7 +109,7 @@
     </div>
 
     <!-- Rulebook Link -->
-    <button class="rules-link" @click="$emit('open-rules')">
+    <button class="mt-6 text-xs text-slate-400 hover:text-indigo-400 underline underline-offset-4 transition-colors" @click="$emit('open-rules')">
       {{ t('rules_btn') }}
     </button>
   </div>
@@ -194,219 +199,3 @@ function onLogout() {
   }
 }
 </script>
-
-<style scoped>
-.lobby-view {
-  min-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px 10px;
-  position: relative;
-}
-
-.lobby-topbar {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 10;
-}
-
-/* User Profile Pill */
-.user-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px 4px 6px;
-  background: rgba(18, 22, 32, 0.85);
-  border: 1px solid var(--border-brass);
-  border-radius: 20px;
-}
-
-.user-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--accent-gold);
-}
-
-.user-avatar-placeholder {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-}
-
-.user-name {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-primary);
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.btn-logout {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 11px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.btn-logout:hover {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.lobby-hero {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.hero-title {
-  font-size: 2.8rem;
-  color: var(--text-primary);
-  letter-spacing: 2px;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.3);
-  margin-bottom: 6px;
-}
-
-.hero-subtitle {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
-
-.lobby-card {
-  width: 100%;
-  max-width: 360px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-}
-
-.form-group label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Verified Nickname Box */
-.verified-nickname-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #090b10;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  height: 42px;
-  box-sizing: border-box;
-}
-
-.verified-icon {
-  font-size: 13px;
-  color: var(--accent-gold);
-}
-
-.verified-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.verified-tag {
-  font-size: 9px;
-  font-weight: 900;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  color: var(--accent-gold);
-  padding: 2px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-}
-
-.room-code-input {
-  text-align: center;
-  letter-spacing: 2px;
-  font-weight: 700;
-  font-family: inherit;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 14px;
-  font-size: 14px;
-  height: 42px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-brass);
-  background: #090b10;
-  color: #fff;
-}
-
-.room-code-input:focus {
-  outline: none;
-  border-color: var(--gold-accent);
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
-}
-
-.mode-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sub-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.full-btn {
-  width: 100%;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.rules-link {
-  margin-top: 18px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 13px;
-  cursor: pointer;
-  text-decoration: underline;
-  transition: color 0.2s ease;
-}
-
-.rules-link:hover {
-  color: var(--gold-accent);
-}
-</style>

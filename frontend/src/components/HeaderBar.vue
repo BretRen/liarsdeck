@@ -1,46 +1,46 @@
 <template>
-  <header class="header-bar glass-panel">
+  <header class="flex items-center justify-between p-3.5 mb-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-xl shadow-black/50 backdrop-blur-xl flex-wrap gap-2.5">
     <!-- Left: Room Code & Invite -->
-    <div class="header-left">
-      <div class="room-tag">
-        <span class="room-label">ROOM</span>
-        <span class="room-code">{{ roomCode }}</span>
+    <div class="flex items-center gap-2">
+      <div class="flex items-center bg-slate-950/80 border border-slate-750 rounded-lg px-2.5 py-1 gap-1.5 shadow-inner">
+        <span class="text-[10px] font-extrabold tracking-widest text-slate-400">ROOM</span>
+        <span class="text-xs font-mono font-bold tracking-wider text-indigo-300">{{ roomCode }}</span>
       </div>
-      <button class="btn-secondary btn-sm" @click="copyInvite" :title="t('invite_btn')">
+      <button class="btn btn-xs btn-neutral bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 font-semibold" @click="copyInvite" :title="t('invite_btn')">
         {{ t('invite_btn') }}
       </button>
     </div>
 
     <!-- Center: Match Status & Turn Countdown Timer -->
-    <div class="header-center">
-      <div class="status-indicator" :class="status">
-        <span class="status-dot"></span>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1 bg-slate-950/70 border border-slate-800 rounded-full text-xs font-semibold" :class="statusBadgeClass">
+        <span class="w-2 h-2 rounded-full" :class="statusDotClass"></span>
         <span>{{ statusLabel }}</span>
       </div>
 
       <!-- Prominent Countdown Timer -->
       <div
         v-if="status === 'playing' && deadline"
-        class="turn-timer"
-        :class="{ urgent: remainingSeconds <= 8 }"
+        class="flex items-baseline gap-0.5 px-3 py-1 rounded-lg border font-mono font-bold transition-all shadow-md"
+        :class="remainingSeconds <= 8 ? 'bg-rose-950/70 border-rose-500/80 text-rose-400 animate-pulse' : 'bg-slate-950/80 border-indigo-500/40 text-indigo-300'"
       >
-        <span class="timer-num">{{ remainingSeconds }}</span>
-        <span class="timer-sec">s</span>
+        <span class="text-base">{{ remainingSeconds }}</span>
+        <span class="text-xs text-slate-400">s</span>
       </div>
     </div>
 
     <!-- Right: Utility Controls -->
-    <div class="header-right">
-      <button class="btn-icon" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
+    <div class="flex items-center gap-1.5">
+      <button class="btn btn-xs btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-300" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
         {{ audio.isMuted.value ? 'Muted' : 'Sound' }}
       </button>
-      <button class="btn-icon" @click="$emit('open-rules')">
+      <button class="btn btn-xs btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-300" @click="$emit('open-rules')">
         {{ t('rules_btn') }}
       </button>
-      <button class="btn-icon lang-btn" @click="toggleLang">
+      <button class="btn btn-xs btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-300" @click="toggleLang">
         {{ lang.toUpperCase() }}
       </button>
-      <button class="btn-icon exit-btn" @click="$emit('leave')" title="离开房间">
+      <button class="btn btn-xs btn-error bg-rose-600/80 hover:bg-rose-600 border-none text-white font-semibold" @click="$emit('leave')" title="离开房间">
         退出
       </button>
     </div>
@@ -74,126 +74,21 @@ const statusLabel = computed(() => {
   return t('status_waiting');
 });
 
+const statusBadgeClass = computed(() => {
+  if (props.status === 'playing') return 'text-emerald-400 border-emerald-500/30';
+  if (props.status === 'paused') return 'text-amber-400 border-amber-500/30';
+  if (props.status === 'game_over') return 'text-indigo-400 border-indigo-500/30';
+  return 'text-slate-300 border-slate-700';
+});
+
+const statusDotClass = computed(() => {
+  if (props.status === 'playing') return 'bg-emerald-400 animate-pulse';
+  if (props.status === 'paused') return 'bg-amber-400 animate-ping';
+  if (props.status === 'game_over') return 'bg-indigo-400';
+  return 'bg-slate-400';
+});
+
 function copyInvite() {
   store.copyInvite();
 }
 </script>
-
-<style scoped>
-.header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  margin-bottom: 14px;
-  background: #141720;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.header-left, .header-center, .header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.room-tag {
-  display: flex;
-  align-items: baseline;
-  background: #0f121a;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  gap: 6px;
-}
-
-.room-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-}
-
-.room-code {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-  color: var(--gold-accent);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.status-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 600;
-  background: #0f1219;
-  border: 1px solid var(--border-subtle);
-}
-
-.status-indicator.waiting { color: var(--text-secondary); }
-.status-indicator.waiting .status-dot { background: var(--text-muted); }
-
-.status-indicator.playing { color: #51cf66; border-color: rgba(81, 207, 102, 0.3); }
-.status-indicator.playing .status-dot { background: #51cf66; box-shadow: 0 0 6px #51cf66; }
-
-.status-indicator.game_over { color: var(--gold-accent); border-color: var(--border-brass-bright); }
-.status-indicator.game_over .status-dot { background: var(--gold-accent); }
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-/* Prominent Turn Timer */
-.turn-timer {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  background: #1c1313;
-  border: 1px solid #742a2a;
-  color: #ff8787;
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.timer-num {
-  font-size: 16px;
-  font-family: var(--font-serif);
-}
-
-.timer-sec {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.turn-timer.urgent {
-  background: #3b1212;
-  border-color: #e03131;
-  color: #ffffff;
-  animation: pulseRed 1s infinite ease-in-out;
-}
-
-.lang-btn {
-  font-weight: 700;
-}
-
-.exit-btn:hover {
-  background: #2b1414;
-  border-color: #821c1c;
-  color: #ff8787;
-}
-</style>
