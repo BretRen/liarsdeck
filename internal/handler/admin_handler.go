@@ -83,6 +83,7 @@ func (h *AdminHandler) Auth(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
 	}
 	return c.JSON(http.StatusOK, map[string]any{
+		"success":       true,
 		"authenticated": true,
 		"version":       GetVersion(),
 	})
@@ -111,6 +112,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	if resp.StatusCode == http.StatusNotFound {
 		return c.JSON(http.StatusOK, map[string]any{
+			"success":         true,
 			"current_version": currVer,
 			"latest_version":  "暂无 Release",
 			"has_update":      false,
@@ -121,6 +123,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return c.JSON(http.StatusOK, map[string]any{
+			"success":         true,
 			"current_version": currVer,
 			"latest_version":  "—",
 			"has_update":      false,
@@ -138,6 +141,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 	hasUpdate := latestTag != "" && latestTag != currVer
 
 	return c.JSON(http.StatusOK, map[string]any{
+		"success":         true,
 		"current_version": currVer,
 		"latest_version":  latestTag,
 		"has_update":      hasUpdate,
@@ -189,6 +193,7 @@ func (h *AdminHandler) GetStats(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]any{
+		"success":       true,
 		"total_rooms":   totalRooms,
 		"total_players": totalPlayers,
 		"current_time":  time.Now().Format("2006-01-02 15:04:05"),

@@ -229,10 +229,10 @@ async function onLogin() {
       body: JSON.stringify({ secret: secretInput.value.trim() }),
     });
     const data = await res.json();
-    if (res.ok && data.authenticated) {
+    if (res.ok && (data.authenticated || data.success)) {
       isAuthenticated.value = true;
       savedSecret.value = secretInput.value.trim();
-      currentVersion.value = data.version || 'v2.2.0';
+      currentVersion.value = data.version || currentVersion.value;
       showToast('管理员身份验证通过');
       fetchStats();
     } else {
@@ -255,14 +255,16 @@ async function checkUpdate() {
       body: JSON.stringify({ secret: savedSecret.value }),
     });
     const data = await res.json();
-    if (res.ok) {
+    if (res.ok && (data.success || data.current_version)) {
       currentVersion.value = data.current_version;
       latestVersion.value = data.latest_version;
       hasUpdate.value = data.has_update;
       releaseName.value = data.release_name || '';
       releaseNotes.value = data.release_body || '';
-      if (!data.has_update) {
+      if (!data.has_update && data.latest_version && data.latest_version !== '—') {
         showToast('当前已是最新版本');
+      } else if (data.latest_version === '—') {
+        showToast(data.release_name || '无法连接 GitHub API');
       }
     } else {
       showToast(data.error || '检查更新失败');
@@ -312,7 +314,7 @@ async function fetchStats() {
       body: JSON.stringify({ secret: savedSecret.value }),
     });
     const data = await res.json();
-    if (res.ok) {
+    if (res.ok && (data.success || typeof data.total_rooms === 'number')) {
       stats.total_rooms = data.total_rooms || 0;
       stats.total_players = data.total_players || 0;
     }
