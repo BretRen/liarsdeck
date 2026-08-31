@@ -88,8 +88,12 @@ func main() {
 	adminGroup.POST("/stats", adminHandler.GetStats)
 
 	// 静态文件与 SPA 页面托管
+	e.File("/callback", "public/index.html")
 	e.Static("/", "public")
 	e.File("/", "public/index.html")
+	e.RouteNotFound("/*", func(c echo.Context) error {
+		return c.File("public/index.html")
+	})
 
 	log.Printf("🃏 Liar's Deck 服务器已启动: http://localhost:%s", port)
 	if os.Getenv("ADMIN_SECRET") != "" {
