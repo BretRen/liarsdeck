@@ -134,7 +134,15 @@ const dict = {
     admin_broadcast_sending: '正在发送广播...',
     admin_broadcast_preset_1: '服务器即将在 5 分钟后进行更新维护，请尽快完成当前对局。',
     admin_broadcast_preset_2: '欢迎来到 Liar\'s Deck 骗子酒馆！祝各位玩家游戏愉快！',
-    global_broadcast_title: '全服系统公告',
+    // Login Modal
+    login_modal_title: "Liar's Deck · 酒馆大门",
+    login_modal_desc: '酒馆正在营业中。请出示您的身份凭证以入座牌桌。',
+    login_btn: '登录 / Login',
+    login_loading_btn: '正在跳转授权中心...',
+    login_secure_tip: '使用 pdnode 统一认证中心 · PKCE 传输加密保护',
+    logout_btn: '登出',
+    logout_confirm: '确定要退出当前账号并登出吗？',
+    logged_in_as: '已登录账号',
 
     // Logs
     battle_log_title: '对局动态',
@@ -277,7 +285,15 @@ const dict = {
     admin_broadcast_sending: 'Broadcasting...',
     admin_broadcast_preset_1: 'Server will undergo maintenance in 5 minutes. Please conclude current matches.',
     admin_broadcast_preset_2: 'Welcome to Liar\'s Deck! Best of luck at the tavern tables!',
-    global_broadcast_title: 'SERVER ANNOUNCEMENT',
+    // Login Modal
+    login_modal_title: "Liar's Deck · Tavern Entrance",
+    login_modal_desc: 'The tavern is open for business. Please verify your identity to take a seat.',
+    login_btn: 'Login with pdnode ID',
+    login_loading_btn: 'Redirecting to Auth Server...',
+    login_secure_tip: 'Secured by pdnode ID · Protected with OAuth2 PKCE',
+    logout_btn: 'Logout',
+    logout_confirm: 'Are you sure you want to sign out?',
+    logged_in_as: 'Signed in as',
 
     // Logs
     battle_log_title: 'Action Log',

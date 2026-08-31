@@ -30,6 +30,9 @@
     <!-- Disconnect / Reconnect Modal for disconnected player -->
     <DisconnectModal />
 
+    <!-- Mandatory OAuth2 PKCE Login Modal -->
+    <LoginModal />
+
     <!-- Global Toast Notification -->
     <transition name="toast-fade">
       <div v-if="toast" class="global-toast">
@@ -42,6 +45,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from './composables/useI18n';
+import { useAuth } from './composables/useAuth';
 import { useGameStore } from './composables/useGameStore';
 import LobbyView from './views/LobbyView.vue';
 import GameView from './views/GameView.vue';
@@ -49,8 +53,10 @@ import RulesModal from './components/RulesModal.vue';
 import AdminModal from './components/AdminModal.vue';
 import PauseModal from './components/PauseModal.vue';
 import DisconnectModal from './components/DisconnectModal.vue';
+import LoginModal from './components/LoginModal.vue';
 
 const { t } = useI18n();
+const { handleCallback } = useAuth();
 const showRules = ref(false);
 const showAdmin = ref(false);
 const { connected, toast, globalBroadcast, dismissBroadcast } = useGameStore();
@@ -62,8 +68,10 @@ function onKeyDown(e) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', onKeyDown);
+  // Check if we are handling an OAuth2 callback
+  await handleCallback();
 });
 
 onUnmounted(() => {

@@ -2,6 +2,16 @@
   <div class="lobby-view">
     <!-- Top Bar Controls -->
     <div class="lobby-topbar">
+      <!-- User Profile Pill -->
+      <div v-if="isAuthenticated && user" class="user-pill glass-panel">
+        <img v-if="avatar" :src="avatar" alt="Avatar" class="user-avatar" />
+        <div v-else class="user-avatar-placeholder">👤</div>
+        <span class="user-name">{{ nickname }}</span>
+        <button class="btn-logout" :title="t('logout_btn')" @click="onLogout">
+          {{ t('logout_btn') }}
+        </button>
+      </div>
+
       <button class="btn-icon" @click="audio.toggleMute" :title="audio.isMuted.value ? t('audio_off') : t('audio_on')">
         {{ audio.isMuted.value ? 'Muted' : 'Sound' }}
       </button>
@@ -17,16 +27,14 @@
 
     <!-- Main Card Box -->
     <div class="lobby-card glass-panel">
-      <!-- Nickname Input -->
+      <!-- Verified Nickname Badge -->
       <div class="form-group">
         <label>{{ t('nickname') }}</label>
-        <input
-          v-model="nicknameInput"
-          type="text"
-          :placeholder="t('nickname_ph')"
-          maxlength="12"
-          @keyup.enter="handleEnter"
-        />
+        <div class="verified-nickname-box">
+          <span class="verified-icon">🔒</span>
+          <span class="verified-name">{{ nickname || 'Player' }}</span>
+          <span class="verified-tag">AUTHENTICATED</span>
+        </div>
       </div>
 
       <!-- Mode 1: Create -->
@@ -106,14 +114,16 @@
 import { ref, onMounted } from 'vue';
 import { useI18n } from '../composables/useI18n';
 import { useAudio } from '../composables/useAudio';
+import { useAuth } from '../composables/useAuth';
 import { useGameStore } from '../composables/useGameStore';
 
 const emit = defineEmits(['open-rules']);
 const { t, lang, toggleLang } = useI18n();
 const audio = useAudio();
+const auth = useAuth();
+const { user, nickname, avatar, isAuthenticated, logout } = auth;
 const store = useGameStore();
 
-const nicknameInput = ref('Player' + Math.floor(Math.random() * 900 + 100));
 const roomCodeInput = ref('');
 const mode = ref('create'); // 'create' | 'join' | 'spectate'
 
@@ -123,10 +133,10 @@ onMounted(() => {
   const saved = store.getSavedSession();
 
   if (saved) {
-    nicknameInput.value = saved.nickname;
     if (!room || saved.roomCode === room.toUpperCase()) {
       roomCodeInput.value = saved.roomCode;
-      store.connect('reconnect', saved.roomCode, saved.nickname, saved.token);
+      const playerName = nickname.value || saved.nickname;
+      store.connect('reconnect', saved.roomCode, playerName, saved.token);
       return;
     }
   }
@@ -144,40 +154,40 @@ function handleEnter() {
 }
 
 function onCreateRoom() {
-  if (!nicknameInput.value.trim()) {
-    store.showToast(t('err_enter_nickname'));
-    return;
-  }
+  const playerName = nickname.value.trim() || 'Player';
   store.clearSession();
-  store.connect('create', '', nicknameInput.value.trim());
+  store.connect('create', '', playerName);
 }
 
 function onJoinRoom() {
-  if (!nicknameInput.value.trim()) {
-    store.showToast(t('err_enter_nickname'));
-    return;
-  }
+  const playerName = nickname.value.trim() || 'Player';
   if (!roomCodeInput.value.trim()) {
     store.showToast(t('err_enter_code'));
     return;
   }
   const code = roomCodeInput.value.trim().toUpperCase();
-  const name = nicknameInput.value.trim();
   const saved = store.getSavedSession();
-  if (saved && saved.roomCode === code && saved.nickname === name) {
-    store.connect('reconnect', code, name, saved.token);
+  if (saved && saved.roomCode === code) {
+    store.connect('reconnect', code, playerName, saved.token);
   } else {
-    store.connect('join', code, name);
+    store.connect('join', code, playerName);
   }
 }
 
 function onSpectateRoom() {
-  const nick = nicknameInput.value.trim() || 'Spectator' + Math.floor(Math.random() * 100);
+  const playerName = nickname.value.trim() || 'Spectator';
   if (!roomCodeInput.value.trim()) {
     store.showToast(t('err_enter_code'));
     return;
   }
-  store.connect('spectate', roomCodeInput.value.trim().toUpperCase(), nick);
+  store.connect('spectate', roomCodeInput.value.trim().toUpperCase(), playerName);
+}
+
+function onLogout() {
+  if (confirm(t('logout_confirm'))) {
+    store.clearSession();
+    logout();
+  }
 }
 </script>
 
@@ -197,11 +207,65 @@ function onSpectateRoom() {
   top: 10px;
   right: 10px;
   display: flex;
+  align-items: center;
   gap: 8px;
+  z-index: 10;
 }
 
-.lang-btn {
+/* User Profile Pill */
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  background: rgba(18, 22, 32, 0.85);
+  border: 1px solid var(--border-brass);
+  border-radius: 20px;
+}
+
+.user-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--accent-gold);
+}
+
+.user-avatar-placeholder {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.user-name {
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--text-primary);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-logout {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .lobby-hero {
@@ -210,46 +274,102 @@ function onSpectateRoom() {
 }
 
 .hero-title {
-  font-size: 3rem;
-  font-weight: 900;
+  font-size: 2.8rem;
   color: var(--text-primary);
   letter-spacing: 2px;
-  text-shadow: 0 0 24px var(--gold-glow);
-  margin-bottom: 4px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.3);
+  margin-bottom: 6px;
 }
 
 .hero-subtitle {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
 }
 
 .lobby-card {
   width: 100%;
-  max-width: 390px;
-  padding: 28px 24px;
-  background: #141720;
-  border: 1px solid var(--border-brass);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  max-width: 360px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 18px;
   text-align: left;
 }
 
 .form-group label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Verified Nickname Box */
+.verified-nickname-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #090b10;
+  border: 1px solid var(--border-brass);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.verified-icon {
+  font-size: 13px;
+  color: var(--accent-gold);
+}
+
+.verified-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verified-tag {
+  font-size: 9px;
+  font-weight: 900;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: var(--accent-gold);
+  padding: 2px 6px;
+  border-radius: 4px;
   letter-spacing: 0.5px;
 }
 
 .room-code-input {
-  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 2px;
+  font-weight: 700;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 14px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-brass);
+  background: #090b10;
+  color: #fff;
+}
+
+.room-code-input:focus {
+  outline: none;
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
 }
 
 .mode-actions {
@@ -265,8 +385,6 @@ function onSpectateRoom() {
 
 .full-btn {
   width: 100%;
-  padding: 12px;
-  font-size: 14px;
 }
 
 .flex-1 {
@@ -274,15 +392,16 @@ function onSpectateRoom() {
 }
 
 .rules-link {
-  margin-top: 20px;
+  margin-top: 18px;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
   border: none;
+  color: var(--text-muted);
+  font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
-  text-underline-offset: 4px;
+  transition: color 0.2s ease;
 }
+
 .rules-link:hover {
   color: var(--gold-accent);
 }
