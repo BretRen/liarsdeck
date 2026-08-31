@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -164,26 +165,35 @@ func (h *AdminHandler) GetStats(c echo.Context) error {
 }
 
 func (h *AdminHandler) Broadcast(c echo.Context) error {
-	ok, err := h.checkAuth(c)
-	if err != nil || !ok {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+	if h.Secret == "" {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用"})
 	}
 
 	var req struct {
+		Secret  string `json:"secret"`
 		Message string `json:"message"`
 	}
-	if err := c.Bind(&req); err != nil || req.Message == "" {
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "请求参数解析失败"})
+	}
+
+	if req.Secret != h.Secret {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+	}
+
+	msg := strings.TrimSpace(req.Message)
+	if msg == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "广播内容不能为空"})
 	}
 
 	roomCount := h.Hub.BroadcastGlobal("server_broadcast", map[string]any{
-		"message":   req.Message,
+		"message":   msg,
 		"timestamp": time.Now().Unix(),
 	})
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"status":     "ok",
-		"message":    "广播已成功推送至全服所有在线房间！",
+		"message":    fmt.Sprintf("广播已成功推送至全服 %d 个房间！", roomCount),
 		"room_count": roomCount,
 	})
 }
