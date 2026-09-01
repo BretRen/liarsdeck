@@ -55,7 +55,7 @@
       <!-- waiting for turn OR dead player watching -->
       <div v-else class="flex items-center gap-2 text-xs text-slate-400 font-medium">
         <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-        <span v-if="isPlayer && !isAlive">已淘汰 — 观战中</span>
+        <span v-if="isPlayer && !isAlive">{{ t('dead_tag') }} — {{ t('watching_tag') }}</span>
         <span v-else-if="isPlayer">{{ t('status_playing') }} ({{ t('status_waiting') }})</span>
         <span v-else>{{ t('spectator_banner') }}</span>
       </div>
@@ -63,7 +63,7 @@
 
     <!-- Game Over Phase -->
     <template v-else-if="computedStatus === 'game_over'">
-      <div class="text-xs text-slate-400 font-medium">对局已结束</div>
+      <div class="text-xs text-slate-400 font-medium">{{ t('status_game_over') }}</div>
     </template>
   </div>
 </template>

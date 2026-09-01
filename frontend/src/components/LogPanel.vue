@@ -12,7 +12,7 @@
 
     <div v-show="isOpen" ref="logBodyRef" class="p-3 max-h-28 overflow-y-auto font-mono text-[11.5px] leading-relaxed text-slate-400 flex flex-col gap-1">
       <div v-for="(log, i) in logs" :key="i" class="text-slate-300/90 hover:text-slate-100 transition-colors">
-        {{ log }}
+        {{ formatLog(log) }}
       </div>
     </div>
   </div>
@@ -26,9 +26,18 @@ const props = defineProps({
   logs: { type: Array, default: () => [] },
 });
 
-const { t } = useI18n();
+const { t, lang } = useI18n();
 const isOpen = ref(true);
 const logBodyRef = ref(null);
+
+function formatLog(log) {
+  if (!log) return '';
+  if (log.includes(' / ')) {
+    const parts = log.split(' / ');
+    return lang.value === 'zh' ? parts[0] : (parts[1] || parts[0]);
+  }
+  return log;
+}
 
 watch(
   () => props.logs,
