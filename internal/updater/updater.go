@@ -85,10 +85,26 @@ func PerformSelfUpdate(repo string, port string) error {
 	binaryName := GetBinaryName()
 	srcBinary := filepath.Join(extractDir, binaryName)
 	if !FileExists(srcBinary) {
-		// 尝试在解压子目录中寻找
+		// 1. 精确匹配
 		_ = filepath.Walk(extractDir, func(p string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() && info.Name() == binaryName {
+			if err == nil && !info.IsDir() && strings.EqualFold(info.Name(), binaryName) {
 				srcBinary = p
+			}
+			return nil
+		})
+	}
+	if !FileExists(srcBinary) {
+		// 2. 模糊匹配平台二进制 (包含 liarsdeck 且平台后缀匹配)
+		_ = filepath.Walk(extractDir, func(p string, info os.FileInfo, err error) error {
+			if err == nil && !info.IsDir() {
+				name := strings.ToLower(info.Name())
+				if strings.Contains(name, "liarsdeck") {
+					if runtime.GOOS == "windows" && strings.HasSuffix(name, ".exe") {
+						srcBinary = p
+					} else if runtime.GOOS != "windows" && !strings.Contains(name, ".") {
+						srcBinary = p
+					}
+				}
 			}
 			return nil
 		})

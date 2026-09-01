@@ -48,24 +48,34 @@ jobs:
 
           # 1. 编译全平台纯单文件可执行文件（内置前端全部资产与历史更新日志）
           # Linux amd64
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck-linux-amd64 main.go
-          tar -czvf dist/liarsdeck-linux-amd64.tar.gz -C dist liarsdeck-linux-amd64
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck main.go
+          cp dist/liarsdeck dist/liarsdeck-linux-amd64
+          tar -czvf dist/liarsdeck-linux-amd64.tar.gz -C dist liarsdeck
+          rm dist/liarsdeck
 
           # Linux arm64
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck-linux-arm64 main.go
-          tar -czvf dist/liarsdeck-linux-arm64.tar.gz -C dist liarsdeck-linux-arm64
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck main.go
+          cp dist/liarsdeck dist/liarsdeck-linux-arm64
+          tar -czvf dist/liarsdeck-linux-arm64.tar.gz -C dist liarsdeck
+          rm dist/liarsdeck
 
           # Windows amd64
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck-windows-amd64.exe main.go
-          (cd dist && zip liarsdeck-windows-amd64.zip liarsdeck-windows-amd64.exe)
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck.exe main.go
+          cp dist/liarsdeck.exe dist/liarsdeck-windows-amd64.exe
+          (cd dist && zip liarsdeck-windows-amd64.zip liarsdeck.exe)
+          rm dist/liarsdeck.exe
 
           # macOS (Darwin) amd64
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck-darwin-amd64 main.go
-          tar -czvf dist/liarsdeck-darwin-amd64.tar.gz -C dist liarsdeck-darwin-amd64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck main.go
+          cp dist/liarsdeck dist/liarsdeck-darwin-amd64
+          tar -czvf dist/liarsdeck-darwin-amd64.tar.gz -C dist liarsdeck
+          rm dist/liarsdeck
 
           # macOS (Darwin) arm64 (Apple Silicon M1/M2/M3/M4)
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck-darwin-arm64 main.go
-          tar -czvf dist/liarsdeck-darwin-arm64.tar.gz -C dist liarsdeck-darwin-arm64
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/liarsdeck main.go
+          cp dist/liarsdeck dist/liarsdeck-darwin-arm64
+          tar -czvf dist/liarsdeck-darwin-arm64.tar.gz -C dist liarsdeck
+          rm dist/liarsdeck
 
       # ── 3. 发布到 GitHub Releases ──
       - name: Publish GitHub Release
