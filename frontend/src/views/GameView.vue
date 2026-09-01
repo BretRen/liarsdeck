@@ -102,11 +102,11 @@
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1600] flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/95 border border-amber-500/60 shadow-2xl shadow-black/60 backdrop-blur-xl select-none"
       >
         <div class="item-used-icon w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs shrink-0">
-          {{ getItemIcon(itemUsedEvent.item) }}
+          {{ getItemIcon(itemUsedEvent?.item) }}
         </div>
         <div class="flex flex-col">
-          <span class="text-[11px] font-bold text-amber-300 leading-tight">{{ itemUsedEvent.nickname }} 使用了道具</span>
-          <span class="text-xs font-bold text-slate-100">{{ getItemName(itemUsedEvent.item) }}</span>
+          <span class="text-[11px] font-bold text-amber-300 leading-tight">{{ itemUsedEvent?.nickname }} 使用了道具</span>
+          <span class="text-xs font-bold text-slate-100">{{ getItemName(itemUsedEvent?.item) }}</span>
         </div>
       </div>
     </Transition>

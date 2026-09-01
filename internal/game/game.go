@@ -369,8 +369,13 @@ func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, erro
 			return nil, fmt.Errorf("当前桌面上暂无出牌 / No played cards")
 		}
 		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
-		nBig, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(g.State.LastPlayedCards))))
-		inspectedCard := g.State.LastPlayedCards[nBig.Int64()]
+		nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(g.State.LastPlayedCards))))
+		var inspectedCard model.Card
+		if err != nil || nBig == nil {
+			inspectedCard = g.State.LastPlayedCards[0]
+		} else {
+			inspectedCard = g.State.LastPlayedCards[nBig.Int64()]
+		}
 		g.Log(fmt.Sprintf("%s 使用了【放大镜】，查看了一张底牌 / %s used Magnifier", p.Nickname, p.Nickname))
 		return map[string]any{
 			"item":           item,
@@ -421,8 +426,13 @@ func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, erro
 				validCards = append(validCards, c)
 			}
 		}
-		nBig, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(validCards))))
-		newTableCard := validCards[nBig.Int64()]
+		nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(validCards))))
+		var newTableCard model.Card
+		if err != nil || nBig == nil {
+			newTableCard = validCards[0]
+		} else {
+			newTableCard = validCards[nBig.Int64()]
+		}
 		g.State.TableCard = newTableCard
 		g.Log(fmt.Sprintf("%s 使用了【骰子】，桌面目标牌变更为: %s / %s used Dice! New card: %s", p.Nickname, newTableCard, p.Nickname, newTableCard))
 		return map[string]any{

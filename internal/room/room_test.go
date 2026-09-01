@@ -176,3 +176,51 @@ func TestPingHandling(t *testing.T) {
 	}
 }
 
+func TestUseEagleEyeItem(t *testing.T) {
+	hub := NewHub()
+	r := hub.CreateRoom()
+	c1 := &Client{ID: "p1", Nickname: "Alice", Room: r, Send: make(chan []byte, 10)}
+	c2 := &Client{ID: "p2", Nickname: "Bob", Room: r, Send: make(chan []byte, 10)}
+	r.AddClient(c1)
+	r.AddClient(c2)
+
+	p1 := &model.Player{ID: "p1", Nickname: "Alice", IsAlive: true, IsReady: true, IsHost: true, Items: []model.ItemType{model.ItemEagleEye}}
+	p2 := &model.Player{ID: "p2", Nickname: "Bob", IsAlive: true, IsReady: true, IsHost: false}
+
+	r.Game.State.Players = []*model.Player{p1, p2}
+	r.Game.State.Status = model.StatusPlaying
+	r.Game.State.CurrentTurn = 0
+	r.Game.State.TableCard = model.King
+	r.Game.State.LastPlayedCards = []model.Card{model.Queen, model.Ace}
+
+	usePayload, _ := json.Marshal(model.UseItemPayload{Item: model.ItemEagleEye})
+	r.HandleClientMessage(c1, model.WSMessage{
+		Action:  "use_item",
+		Payload: usePayload,
+	})
+
+	if len(p1.Items) != 0 {
+		t.Fatalf("expected p1 to have consumed eagle eye, got %v", p1.Items)
+	}
+
+	// Check that c1 received eagle_eye_result
+	gotResult := false
+	for len(c1.Send) > 0 {
+		msg := <-c1.Send
+		var parsed struct {
+			Type string `json:"type"`
+			Data map[string]any `json:"data"`
+		}
+		_ = json.Unmarshal(msg, &parsed)
+		if parsed.Type == "eagle_eye_result" {
+			gotResult = true
+			if parsed.Data["card"] != "Q" && parsed.Data["card"] != "A" {
+				t.Fatalf("expected inspected card to be Q or A, got %v", parsed.Data["card"])
+			}
+		}
+	}
+	if !gotResult {
+		t.Fatalf("expected c1 to receive eagle_eye_result")
+	}
+}
+
