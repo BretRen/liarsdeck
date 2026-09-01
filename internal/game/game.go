@@ -395,7 +395,7 @@ func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, erro
 		newHand := make([]model.Card, 0, len(p.Hand))
 		replacedCount := 0
 		for _, c := range p.Hand {
-			if c != g.State.TableCard && c != model.Two && replacedCount < 2 {
+			if c != g.State.TableCard && c != model.Two && replacedCount < 1 {
 				deck := NewDeck()
 				newHand = append(newHand, deck[0])
 				replacedCount++
@@ -404,12 +404,15 @@ func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, erro
 			}
 		}
 		p.Hand = newHand
-		g.Log(fmt.Sprintf("%s 使用了【啤酒】，替换了手中的假牌 / %s used Beer", p.Nickname, p.Nickname))
+		g.Log(fmt.Sprintf("%s 使用了【啤酒】，替换了手里的 1 张假牌 / %s used Beer (replaced 1 false card)", p.Nickname, p.Nickname))
 		return map[string]any{
 			"item": item,
 		}, nil
 
 	case model.ItemKevlarArmor:
+		if p.HasArmor {
+			return nil, fmt.Errorf("已穿戴防弹衣 / Armor already equipped")
+		}
 		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
 		p.HasArmor = true
 		g.Log(fmt.Sprintf("%s 穿上了【防弹衣】 / %s equipped Vest", p.Nickname, p.Nickname))
@@ -606,12 +609,15 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool,
 		onShot(p.Nickname, isFatal, isDoubleShot, armorBlocked)
 	}
 
-	// 道具模式：若空枪幸存，奖励 1 个随机道具
+	// 道具模式：若空枪幸存，50% 几率奖励 1 个随机道具（上限持有 1 个）
 	if p.IsAlive && g.State.GameMode == model.ModeItems {
-		if len(p.Items) < 2 {
-			newItem := g.GrantRandomItem(p)
-			if newItem != "" {
-				g.Log(fmt.Sprintf("%s 空枪幸存，获得道具补给 / %s survived and gained an item", p.Nickname, p.Nickname))
+		if len(p.Items) < 1 {
+			roll, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(2))
+			if roll != nil && roll.Int64() == 1 {
+				newItem := g.GrantRandomItem(p)
+				if newItem != "" {
+					g.Log(fmt.Sprintf("%s 空枪幸存，获得道具补给 / %s survived and gained an item", p.Nickname, p.Nickname))
+				}
 			}
 		}
 	}

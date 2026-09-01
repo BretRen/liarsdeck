@@ -52,9 +52,9 @@
         <div class="flex items-center gap-2 flex-wrap justify-center">
           <span
             v-if="stepData.double_shot"
-            class="badge badge-warning badge-sm font-extrabold tracking-wider uppercase py-1 px-3 shadow-lg shadow-amber-600/40 animate-bounce"
+            class="badge badge-warning badge-sm font-extrabold tracking-wider uppercase py-1 px-3 shadow-lg shadow-amber-600/40 animate-pulse"
           >
-            {{ t('event_shot_badge_double') }}
+            ⚡ {{ shotStage === 1 ? (lang === 'zh' ? '第 1 枪 / 2' : 'SHOT 1 / 2') : (lang === 'zh' ? '第 2 枪 / 2' : 'SHOT 2 / 2') }}
           </span>
           <span
             v-if="stepData.armor_blocked"
@@ -73,31 +73,66 @@
 
         <!-- 6-Chamber Revolver Graphic with Double Fire / Armor Animation -->
         <div
-          class="relative w-20 h-20 rounded-full border-2 border-slate-700 bg-slate-950 flex items-center justify-center shadow-inner my-2"
-          :class="{ 'animate-double-recoil': stepData.double_shot, 'animate-armor-shield': stepData.armor_blocked }"
+          class="relative w-24 h-24 rounded-full border-2 border-slate-700 bg-slate-950 flex items-center justify-center shadow-inner my-2"
+          :class="[
+            stepData.double_shot ? (shotStage === 1 ? 'animate-recoil-1' : 'animate-recoil-2') : '',
+            stepData.armor_blocked ? 'animate-armor-shield' : ''
+          ]"
         >
-          <div class="absolute w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
+          <!-- Central Hub -->
+          <div class="absolute w-7 h-7 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
             <span v-if="stepData.armor_blocked" class="text-xs">🛡️</span>
-            <span v-else-if="stepData.double_shot" class="text-xs text-amber-400 font-bold">⚡2</span>
+            <span v-else-if="stepData.double_shot" class="text-xs text-amber-400 font-black">
+              {{ shotStage === 1 ? '①' : '②' }}
+            </span>
+          </div>
+
+          <!-- Double Shot Muzzle Flashes -->
+          <div
+            v-if="stepData.double_shot && shotStage === 1"
+            class="absolute -top-3 text-amber-400 text-base animate-ping select-none"
+          >
+            💥
+          </div>
+          <div
+            v-if="stepData.double_shot && shotStage === 2"
+            class="absolute -top-3 text-rose-500 text-lg animate-ping select-none"
+          >
+            🔥
           </div>
 
           <!-- 6 chambers arranged in a circle -->
           <div
             v-for="idx in 6"
             :key="idx"
-            class="absolute w-4 h-4 rounded-full border transition-all"
+            class="absolute w-4 h-4 rounded-full border transition-all duration-300"
             :class="getChamberClass(idx)"
             :style="{
-              transform: `rotate(${(idx - 1) * 60}deg) translate(0, -27px)`
+              transform: `rotate(${(idx - 1) * 60}deg) translate(0, -32px)`
             }"
           ></div>
         </div>
 
+        <!-- Stage Title -->
         <h2
-          class="text-2xl font-black font-serif tracking-wide"
-          :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]' : (stepData.armor_blocked ? 'text-sky-300 drop-shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]')"
+          class="text-2xl font-black font-serif tracking-wide transition-all"
+          :class="stepData.fatal && (shotStage === 2 || !stepData.double_shot) ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]' : (stepData.armor_blocked ? 'text-sky-300 drop-shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]')"
         >
-          <template v-if="stepData.fatal">
+          <template v-if="stepData.double_shot">
+            <span v-if="shotStage === 1" class="text-amber-300">
+              ⚡ {{ lang === 'zh' ? '第 1 发扣击：空枪！' : '1st Shot: CLICK!' }}
+            </span>
+            <span v-else-if="stepData.fatal" class="text-rose-400">
+              💥 {{ lang === 'zh' ? '第 2 发扣击：中弹！' : '2nd Shot: BANG!' }}
+            </span>
+            <span v-else-if="stepData.armor_blocked" class="text-sky-300">
+              🛡️ {{ t('event_shot_badge_armor') }}
+            </span>
+            <span v-else class="text-emerald-400">
+              🛡️ {{ lang === 'zh' ? '第 2 发扣击：幸存！' : '2nd Shot: SURVIVED!' }}
+            </span>
+          </template>
+          <template v-else-if="stepData.fatal">
             {{ t('event_bang_title') }}
           </template>
           <template v-else-if="stepData.armor_blocked">
@@ -110,7 +145,7 @@
 
         <p class="text-sm text-slate-300 leading-relaxed max-w-xs">
           <span class="font-bold text-slate-100 mr-1">{{ stepData.target }}</span>
-          <template v-if="stepData.fatal">
+          <template v-if="stepData.fatal && (shotStage === 2 || !stepData.double_shot)">
             {{ t('event_bang_sub') }}
           </template>
           <template v-else-if="stepData.armor_blocked">
@@ -129,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useI18n } from '../composables/useI18n';
 import { useGameStore } from '../composables/useGameStore';
 
@@ -138,8 +173,30 @@ const props = defineProps({
   stepData: { type: Object, default: () => ({}) },
 });
 
-const { t } = useI18n();
+const { t, lang } = useI18n();
 const store = useGameStore();
+
+const shotStage = ref(1);
+let shotStageTimer = null;
+
+watch(
+  () => props.currentStep,
+  (val) => {
+    if (val === 'shot') {
+      shotStage.value = 1;
+      if (props.stepData?.double_shot) {
+        if (shotStageTimer) clearTimeout(shotStageTimer);
+        shotStageTimer = setTimeout(() => {
+          shotStage.value = 2;
+        }, 1100);
+      }
+    } else {
+      shotStage.value = 1;
+      if (shotStageTimer) clearTimeout(shotStageTimer);
+    }
+  },
+  { immediate: true }
+);
 
 function isCardHonest(card) {
   const tableCard = store.state.value.table_card;
@@ -153,23 +210,26 @@ function getChamberClass(idx) {
   const isArmor = props.stepData.armor_blocked;
 
   if (idx === 1) {
+    if (shotStage.value === 1 && isDouble) {
+      return 'bg-amber-400 border-amber-200 shadow-[0_0_16px_rgba(251,191,36,1)] scale-125';
+    }
     if (isArmor) {
-      return 'bg-sky-500 border-sky-300 shadow-[0_0_14px_rgba(56,189,248,0.95)] animate-pulse';
+      return 'bg-sky-500 border-sky-300 shadow-[0_0_14px_rgba(56,189,248,0.95)]';
     }
-    if (isFatal) {
+    if (isFatal && (!isDouble || shotStage.value === 1)) {
       return 'bg-rose-500 border-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.95)] animate-ping';
-    }
-    if (isDouble) {
-      return 'bg-amber-500 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.85)] animate-pulse';
     }
     return 'bg-emerald-500 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]';
   }
 
   if (idx === 2 && isDouble) {
-    if (isFatal) {
-      return 'bg-rose-500 border-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.95)] animate-ping';
+    if (shotStage.value === 2) {
+      if (isFatal) {
+        return 'bg-rose-500 border-rose-300 shadow-[0_0_18px_rgba(244,63,94,1)] scale-125 animate-ping';
+      }
+      return 'bg-amber-400 border-amber-200 shadow-[0_0_16px_rgba(251,191,36,1)] scale-125';
     }
-    return 'bg-amber-500 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.85)] animate-pulse';
+    return 'bg-slate-800 border-slate-600';
   }
 
   return 'bg-slate-900 border-slate-700';
@@ -184,15 +244,24 @@ const overlayBg = computed(() => {
 </script>
 
 <style scoped>
-@keyframes doubleRecoil {
-  0% { transform: scale(1) translateY(0); }
-  20% { transform: scale(1.18) translateY(-6px); }
-  45% { transform: scale(0.96) translateY(2px); }
-  65% { transform: scale(1.24) translateY(-8px); }
-  100% { transform: scale(1) translateY(0); }
+@keyframes recoil1 {
+  0% { transform: scale(1) translateY(0) rotate(0deg); }
+  25% { transform: scale(1.22) translateY(-10px) rotate(-4deg); }
+  60% { transform: scale(0.95) translateY(3px) rotate(2deg); }
+  100% { transform: scale(1) translateY(0) rotate(0deg); }
 }
-.animate-double-recoil {
-  animation: doubleRecoil 0.75s ease-out both;
+.animate-recoil-1 {
+  animation: recoil1 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes recoil2 {
+  0% { transform: scale(1) translateY(0) rotate(0deg); }
+  25% { transform: scale(1.28) translateY(-14px) rotate(6deg); }
+  60% { transform: scale(0.92) translateY(4px) rotate(-3deg); }
+  100% { transform: scale(1) translateY(0) rotate(0deg); }
+}
+.animate-recoil-2 {
+  animation: recoil2 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
 @keyframes armorShield {

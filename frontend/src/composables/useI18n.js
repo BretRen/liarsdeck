@@ -102,12 +102,12 @@ const dict = {
 
     // Items Mode Rules
     rule_items_how_title: '道具的获取',
-    rule_items_how_desc: '每次你被开枪但抽到空包弹幸存后，系统自动随机补发一个道具（上限 2 个）。道具只能在你的回合中使用。',
+    rule_items_how_desc: '每次你被开枪但抽到空包弹幸存后，有 50% 概率获得一个随机道具补给（背包上限 1 个）。道具只能在你的回合中使用。',
     rule_items_list_title: '道具效果说明',
     rule_item_eagle_eye_detail: '查看上家最后打出的一组牌中随机一张的真实点数，仅自己可见。桌面无牌时不可用。',
     rule_item_sawed_off_detail: '激活后，下一次你被迫开枪惩罚时连扣两次扳机，每次独立判定是否命中实弹。',
-    rule_item_hard_liquor_detail: '把手牌中最多 2 张非目标牌（假牌）替换为新的随机牌，帮你更新手牌结构。',
-    rule_item_kevlar_armor_detail: '装备后吸收下一次致命实弹，护甲碎掉但你存活。不能挡空包弹，护甲不叠加。',
+    rule_item_hard_liquor_detail: '把手牌中 1 张非目标牌（假牌）替换为新的随机牌。',
+    rule_item_kevlar_armor_detail: '装备后吸收下一次致命实弹，护甲碎掉但你存活，且重新装填新轮盘。无法重复穿戴。',
     rule_item_fate_shift_detail: '将桌面目标牌随机替换为另一张（K/Q/A 三选一但不与当前相同），迫使所有人重新评估手牌。',
 
     // Disconnect & Pause Modals
@@ -205,7 +205,7 @@ const dict = {
     item_sawed_off_name: '猎枪',
     item_sawed_off_desc: '下一次受罚开枪连扣两次扳机',
     item_hard_liquor_name: '啤酒',
-    item_hard_liquor_desc: '替换手中的假牌',
+    item_hard_liquor_desc: '替换手里的 1 张假牌',
     item_kevlar_armor_name: '防弹衣',
     item_kevlar_armor_desc: '抵消一次致命实弹',
     item_fate_shift_name: '骰子',
@@ -341,12 +341,12 @@ const dict = {
 
     // Items Mode Rules
     rule_items_how_title: 'How to Get Items',
-    rule_items_how_desc: 'Each time you survive a blank shot, the server randomly grants you one item (max 2 held at once). Items can only be used on your own turn.',
+    rule_items_how_desc: 'Each time you survive a blank shot, you have a 50% chance to gain an item (max 1 held). Items can only be used on your own turn.',
     rule_items_list_title: 'Item Effects',
     rule_item_eagle_eye_detail: 'Peek at one random card from the last played group. Only you can see the result. Disabled when no cards are on the table.',
     rule_item_sawed_off_detail: 'When activated, your next gunshot penalty fires twice. Each shot is independently rolled for a live or blank round.',
-    rule_item_hard_liquor_detail: 'Replace up to 2 non-table cards (bluff cards) in your hand with new random draws. Helps rebuild a bad hand.',
-    rule_item_kevlar_armor_detail: 'Absorbs the next fatal live round hit. The armor breaks after use but you survive. Does not stack.',
+    rule_item_hard_liquor_detail: 'Replace 1 non-table card in your hand with a new random draw.',
+    rule_item_kevlar_armor_detail: 'Absorbs the next fatal live round hit, then reloads a fresh cylinder. Cannot equip multiple vests.',
     rule_item_fate_shift_detail: 'Reroll the table card to a different one (K/Q/A, never the same as current). Forces everyone to re-evaluate their hands.',
 
     // Disconnect & Pause Modals
@@ -444,7 +444,7 @@ const dict = {
     item_sawed_off_name: 'Shotgun',
     item_sawed_off_desc: 'Next gunshot penalty fires twice',
     item_hard_liquor_name: 'Beer',
-    item_hard_liquor_desc: 'Replace false cards in hand',
+    item_hard_liquor_desc: 'Replace 1 false card in hand',
     item_kevlar_armor_name: 'Vest',
     item_kevlar_armor_desc: 'Block one fatal bullet',
     item_fate_shift_name: 'Dice',

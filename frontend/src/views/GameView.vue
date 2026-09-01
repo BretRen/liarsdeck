@@ -95,7 +95,45 @@
       :step-data="currentStepData"
     />
 
-    <!-- Item Used Notification -->
+    <!-- Item VFX & Emoji Particle Blast Overlay -->
+    <Transition name="item-vfx">
+      <div
+        v-if="itemUsedEvent"
+        class="fixed inset-0 pointer-events-none z-[1550] flex items-center justify-center overflow-hidden"
+      >
+        <!-- Full-screen ambient item aura -->
+        <div
+          class="absolute inset-0 transition-opacity duration-500 opacity-25 animate-pulse"
+          :class="getItemAuraBg(itemUsedEvent?.item)"
+        ></div>
+
+        <!-- Central Burst Graphic & Emojis -->
+        <div class="relative flex items-center justify-center">
+          <div
+            v-for="(em, idx) in getItemEmojis(itemUsedEvent?.item)"
+            :key="idx"
+            class="absolute text-3xl md:text-4xl select-none animate-item-particle"
+            :style="{
+              '--angle': `${(idx * 72) + 15}deg`,
+              '--dist': `${85 + (idx % 2) * 35}px`,
+              '--delay': `${idx * 0.06}s`
+            }"
+          >
+            {{ em }}
+          </div>
+
+          <!-- Central Glowing Core Icon -->
+          <div
+            class="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-2xl backdrop-blur-md animate-item-core border"
+            :class="getItemCoreClass(itemUsedEvent?.item)"
+          >
+            {{ getItemIcon(itemUsedEvent?.item) }}
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Item Used Notification Toast -->
     <Transition name="item-toast">
       <div
         v-if="itemUsedEvent"
@@ -200,6 +238,39 @@ function getItemIcon(item) {
   return icons[item] || '?';
 }
 
+function getItemEmojis(item) {
+  const map = {
+    eagle_eye: ['🔍', '✨', '👁️', '🔎', '💫'],
+    sawed_off: ['⚡', '💥', '🔥', '💨', '⚡'],
+    hard_liquor: ['🍺', '🫧', '🍻', '✨', '🫧'],
+    kevlar_armor: ['🛡️', '💠', '🔷', '⚡', '✨'],
+    fate_shift: ['🎲', '💫', '🌟', '✨', '🎯'],
+  };
+  return map[item] || ['✨', '🎁', '✨', '💫', '✨'];
+}
+
+function getItemAuraBg(item) {
+  const map = {
+    eagle_eye: 'bg-amber-500/20',
+    sawed_off: 'bg-rose-600/25',
+    hard_liquor: 'bg-yellow-500/20',
+    kevlar_armor: 'bg-sky-500/20',
+    fate_shift: 'bg-purple-600/20',
+  };
+  return map[item] || 'bg-indigo-600/20';
+}
+
+function getItemCoreClass(item) {
+  const map = {
+    eagle_eye: 'bg-amber-950/80 border-amber-400/80 shadow-amber-500/40 text-amber-300',
+    sawed_off: 'bg-rose-950/80 border-rose-400/80 shadow-rose-500/50 text-rose-300',
+    hard_liquor: 'bg-yellow-950/80 border-yellow-400/80 shadow-yellow-500/40 text-yellow-300',
+    kevlar_armor: 'bg-sky-950/80 border-sky-400/80 shadow-sky-500/40 text-sky-300',
+    fate_shift: 'bg-purple-950/80 border-purple-400/80 shadow-purple-500/40 text-purple-300',
+  };
+  return map[item] || 'bg-slate-900 border-slate-700 text-slate-100';
+}
+
 function getItemName(item) {
   if (!item) return '';
   const key = `item_${item}_name`;
@@ -214,6 +285,54 @@ function onLeave() {
 </script>
 
 <style scoped>
+/* Item VFX Animations */
+.item-vfx-enter-active {
+  animation: itemVfxIn 0.3s ease-out both;
+}
+.item-vfx-leave-active {
+  animation: itemVfxOut 0.4s ease-in both;
+}
+@keyframes itemVfxIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes itemVfxOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes itemCoreSpin {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  40% { transform: scale(1.25) rotate(15deg); opacity: 1; }
+  70% { transform: scale(0.95) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-item-core {
+  animation: itemCoreSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes itemParticleFly {
+  0% {
+    transform: rotate(var(--angle)) translateY(0px) scale(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -0.6)) scale(1.3);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -1)) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -1.35)) scale(0.5);
+  }
+}
+.animate-item-particle {
+  animation: itemParticleFly 1.8s cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
+}
+
 /* Item Used Toast Transition */
 .item-toast-enter-active {
   animation: itemToastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) both;

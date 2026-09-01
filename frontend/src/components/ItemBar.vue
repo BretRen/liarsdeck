@@ -1,11 +1,11 @@
 <template>
   <div class="p-3 mb-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-xl shadow-black/50 backdrop-blur-xl w-full">
     <!-- 顶栏小标签 -->
-    <div class="flex items-center justify-between mb-2.5 px-0.5 text-[11px] font-bold text-slate-400">
+    <div class="flex items-center justify-between mb-2 px-0.5 text-[11px] font-bold text-slate-400">
       <div class="flex items-center gap-1.5">
         <span class="tracking-wider text-slate-300">{{ t('items_inventory_label') }}</span>
         <span class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 font-mono">
-          {{ items.length }}/2
+          {{ items.length }}/1
         </span>
       </div>
       <span v-if="items.length === 0" class="text-[10px] text-slate-500">
@@ -16,33 +16,36 @@
       </span>
     </div>
 
-    <!-- 2 格道具槽位 -->
-    <div class="grid grid-cols-2 gap-2.5 w-full">
+    <!-- 1 格道具槽位 -->
+    <div class="w-full">
       <div
-        v-for="slotIdx in [0, 1]"
-        :key="slotIdx"
-        class="h-12 rounded-xl border transition-all duration-200 relative flex items-center p-2.5"
-        :class="getSlotClass(items[slotIdx])"
+        class="h-14 rounded-xl border transition-all duration-200 relative flex items-center p-3"
+        :class="getSlotClass(items[0])"
       >
         <!-- 槽位有道具 -->
-        <template v-if="items[slotIdx]">
-          <div class="flex items-center justify-between w-full gap-2">
-            <div class="flex flex-col text-left overflow-hidden">
-              <span class="font-bold text-xs text-slate-100 truncate">
-                {{ getItemName(items[slotIdx]) }}
-              </span>
-              <span class="text-[10px] text-slate-400 truncate max-w-[130px]" :title="getItemDesc(items[slotIdx])">
-                {{ getItemDesc(items[slotIdx]) }}
-              </span>
+        <template v-if="items[0]">
+          <div class="flex items-center justify-between w-full gap-3">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-sm shrink-0">
+                {{ getItemIcon(items[0]) }}
+              </div>
+              <div class="flex flex-col text-left overflow-hidden">
+                <span class="font-bold text-xs text-slate-100 truncate">
+                  {{ getItemName(items[0]) }}
+                </span>
+                <span class="text-[10.5px] text-slate-400 truncate max-w-[200px]" :title="getItemDesc(items[0])">
+                  {{ getItemDesc(items[0]) }}
+                </span>
+              </div>
             </div>
 
             <!-- 使用按钮 -->
             <button
               type="button"
-              class="btn btn-xs shrink-0 font-bold px-3 transition-all"
-              :class="getButtonClass(items[slotIdx])"
-              :disabled="isItemDisabled(items[slotIdx])"
-              @click="onUse(items[slotIdx])"
+              class="btn btn-sm shrink-0 font-bold px-4 transition-all"
+              :class="getButtonClass(items[0])"
+              :disabled="isItemDisabled(items[0])"
+              @click="onUse(items[0])"
             >
               {{ t('item_use_btn') }}
             </button>
@@ -51,7 +54,7 @@
 
         <!-- 空槽位 -->
         <template v-else>
-          <div class="flex items-center justify-center w-full text-slate-600 text-xs font-mono">
+          <div class="flex items-center justify-center w-full text-slate-600 text-xs font-mono py-1">
             <span class="text-[11px] font-semibold tracking-wide">{{ t('item_slot_empty') }}</span>
           </div>
         </template>
@@ -80,6 +83,11 @@ const props = defineProps({
 
 const emit = defineEmits(['use-item']);
 const { t } = useI18n();
+
+function getItemIcon(item) {
+  const icons = { eagle_eye: '🔍', sawed_off: '⚡', hard_liquor: '🍺', kevlar_armor: '🛡️', fate_shift: '🎲' };
+  return icons[item] || '🎁';
+}
 
 function getItemName(item) {
   const map = {
