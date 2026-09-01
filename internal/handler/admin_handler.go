@@ -76,11 +76,17 @@ func (h *AdminHandler) checkAuth(c echo.Context) (bool, error) {
 
 func (h *AdminHandler) Auth(c echo.Context) error {
 	if h.Secret == "" {
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用 / Admin API disabled: ADMIN_SECRET is not set"})
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error":   "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用 / Admin API disabled: ADMIN_SECRET is not set",
+			"message": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用 / Admin API disabled: ADMIN_SECRET is not set",
+		})
 	}
 	ok, err := h.checkAuth(c)
 	if err != nil || !ok {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error":   "管理密钥错误 / Invalid admin secret",
+			"message": "管理密钥错误 / Invalid admin secret",
+		})
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"success":       true,
@@ -90,21 +96,36 @@ func (h *AdminHandler) Auth(c echo.Context) error {
 }
 
 func (h *AdminHandler) CheckUpdate(c echo.Context) error {
+	if h.Secret == "" {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error":   "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用",
+			"message": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用",
+		})
+	}
 	ok, err := h.checkAuth(c)
 	if err != nil || !ok {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error":   "管理密钥错误 / Invalid admin secret",
+			"message": "管理密钥错误 / Invalid admin secret",
+		})
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", "https://api.github.com/repos/BretRen/liarsdeck/releases/latest", nil)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error":   err.Error(),
+			"message": err.Error(),
+		})
 	}
 	req.Header.Set("User-Agent", "LiarsDeck-Server")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.JSON(http.StatusBadGateway, map[string]string{"error": "无法连接 GitHub: " + err.Error()})
+		return c.JSON(http.StatusBadGateway, map[string]string{
+			"error":   "无法连接 GitHub: " + err.Error(),
+			"message": "无法连接 GitHub: " + err.Error(),
+		})
 	}
 	defer resp.Body.Close()
 
@@ -117,7 +138,7 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 			"latest_version":  "暂无 Release",
 			"has_update":      false,
 			"release_name":    "尚未发布 Release 版本",
-			"release_body":    "GitHub 仓库 (BretRen/liarsdeck) 暂未发布任何 Release。\n推送版本 Tag (例如: git tag v2.0.0 && git push origin v2.0.0) 后 GitHub Actions 将自动构建并发布。",
+			"release_body":    "GitHub 仓库 (BretRen/liarsdeck) 暂未发布任何 Release。\n推送版本 Tag (例如: git tag v2.4.0 && git push origin v2.4.0) 后 GitHub Actions 将自动构建并发布。",
 		})
 	}
 
@@ -134,7 +155,10 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 
 	var data map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "解析 GitHub 数据失败"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error":   "解析 GitHub 数据失败",
+			"message": "解析 GitHub 数据失败",
+		})
 	}
 
 	latestTag, _ := data["tag_name"].(string)
@@ -152,9 +176,18 @@ func (h *AdminHandler) CheckUpdate(c echo.Context) error {
 }
 
 func (h *AdminHandler) TriggerUpdate(c echo.Context) error {
+	if h.Secret == "" {
+		return c.JSON(http.StatusForbidden, map[string]string{
+			"error":   "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用",
+			"message": "服务端未配置 ADMIN_SECRET 环境变量，管理员接口已安全禁用",
+		})
+	}
 	ok, err := h.checkAuth(c)
 	if err != nil || !ok {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "管理密钥错误 / Invalid admin secret"})
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error":   "管理密钥错误 / Invalid admin secret",
+			"message": "管理密钥错误 / Invalid admin secret",
+		})
 	}
 
 	// 启动纯 Go 原生后台自更新流程，无需系统具备 go 编译器或外部工具

@@ -228,7 +228,7 @@ async function onLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: secretInput.value.trim() }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && (data.authenticated || data.success)) {
       isAuthenticated.value = true;
       savedSecret.value = secretInput.value.trim();
@@ -236,7 +236,8 @@ async function onLogin() {
       showToast('管理员身份验证通过');
       fetchStats();
     } else {
-      showToast(data.error || '密钥错误');
+      const errMsg = data.error || data.message || `验证失败 (HTTP ${res.status})`;
+      showToast(errMsg);
     }
   } catch (e) {
     showToast('验证请求失败: ' + e.message);
@@ -254,7 +255,7 @@ async function checkUpdate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: savedSecret.value }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && (data.success || data.current_version)) {
       currentVersion.value = data.current_version;
       latestVersion.value = data.latest_version;
@@ -267,7 +268,8 @@ async function checkUpdate() {
         showToast(data.release_name || '无法连接 GitHub API');
       }
     } else {
-      showToast(data.error || '检查更新失败');
+      const errMsg = data.error || data.message || `检查更新失败 (HTTP ${res.status})`;
+      showToast(errMsg);
     }
   } catch (e) {
     showToast('检查更新异常: ' + e.message);
@@ -291,13 +293,14 @@ async function triggerUpdate() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: savedSecret.value }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && (data.success || data.status === 'started' || data.status === 'ok')) {
-      updateLog.value = `🚀 ${data.message}\n⏳ 服务端正在执行热替换并重启，请在 5-10 秒后刷新网页！`;
+      updateLog.value = `🚀 ${data.message || '更新指令已发送'}\n⏳ 服务端正在执行热替换并重启，请在 5-10 秒后刷新网页！`;
       showToast('更新程序已启动！');
     } else {
-      updateLog.value = `❌ 更新失败: ${data.error || '未知错误'}`;
-      showToast(data.error || '触发更新失败');
+      const errMsg = data.error || data.message || `HTTP ${res.status}: ${res.statusText || '请求被拒绝'}`;
+      updateLog.value = `❌ 更新失败: ${errMsg}`;
+      showToast(errMsg);
       isUpdating.value = false;
     }
   } catch (e) {
@@ -313,7 +316,7 @@ async function fetchStats() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: savedSecret.value }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && (data.success || typeof data.total_rooms === 'number')) {
       stats.total_rooms = data.total_rooms || 0;
       stats.total_players = data.total_players || 0;
@@ -333,12 +336,13 @@ async function sendBroadcast() {
         message: broadcastMsg.value.trim(),
       }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && (data.success || data.status === 'ok')) {
       showToast(data.message || `广播已成功推送至全服 ${data.room_count || data.broadcast_count || 0} 个房间！`);
       broadcastMsg.value = '';
     } else {
-      showToast(data.error || '广播发送失败');
+      const errMsg = data.error || data.message || '广播发送失败';
+      showToast(errMsg);
     }
   } catch (e) {
     showToast('发送广播异常: ' + e.message);
