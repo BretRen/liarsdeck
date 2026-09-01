@@ -15,13 +15,13 @@
         v-if="store.state.value.game_mode === 'items'"
         class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px] font-bold tracking-wide"
       >
-        道具
+        {{ t('mode_items_title') }}
       </span>
       <span
         v-else
         class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 text-[9px] font-bold tracking-wide"
       >
-        普通
+        {{ t('mode_classic_title') }}
       </span>
 
       <!-- Network Latency Ping Badge -->

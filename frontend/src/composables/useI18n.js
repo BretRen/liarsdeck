@@ -81,6 +81,8 @@ const dict = {
 
     // Rules Modal
     rules_title: '游戏规则与牌理',
+    rule_section_basic: '基础规则',
+    rule_section_items: '道具模式',
     rule_goal_title: '对局目标',
     rule_goal_desc: '存活至全桌最后一人，或打光所有手牌并在下家质疑中证明清白。',
     rule_deck_title: '牌组构成 (共24张)',
@@ -318,6 +320,8 @@ const dict = {
 
     // Rules Modal
     rules_title: 'Tavern Rules & Mechanics',
+    rule_section_basic: 'Basic Rules',
+    rule_section_items: 'Items Mode',
     rule_goal_title: 'The Objective',
     rule_goal_desc: 'Be the last one standing, or discard all cards and survive the final challenge.',
     rule_deck_title: 'Deck (24 Cards)',

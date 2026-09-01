@@ -78,16 +78,16 @@
           <span
             v-if="player.has_armor"
             class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px]"
-            title="防弹衣 (抵消一次致命实弹)"
+            :title="t('armor_equipped_tag')"
           >
-            防弹衣
+            {{ t('armor_equipped_tag') }}
           </span>
           <span
             v-if="player.item_count || (player.items && player.items.length)"
             class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 text-[9px] font-mono"
-            :title="`持有 ${player.item_count || player.items.length} 个道具`"
+            :title="`${t('items_inventory_label')}: ${player.item_count || player.items.length}`"
           >
-            道具:{{ player.item_count || player.items.length }}
+            {{ t('items_inventory_label') }}:{{ player.item_count || player.items.length }}
           </span>
         </div>
       </div>

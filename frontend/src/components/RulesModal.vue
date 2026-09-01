@@ -18,7 +18,7 @@
         <!-- ── 基础规则 ── -->
         <div class="flex items-center gap-2 mb-3">
           <div class="h-px flex-1 bg-slate-800"></div>
-          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2">基础规则</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2">{{ t('rule_section_basic') }}</span>
           <div class="h-px flex-1 bg-slate-800"></div>
         </div>
 
@@ -84,7 +84,7 @@
         <!-- ── 道具模式 ── -->
         <div class="flex items-center gap-2 mb-3">
           <div class="h-px flex-1 bg-slate-800"></div>
-          <span class="text-[10px] font-bold text-amber-600 uppercase tracking-widest px-2">道具模式</span>
+          <span class="text-[10px] font-bold text-amber-600 uppercase tracking-widest px-2">{{ t('rule_section_items') }}</span>
           <div class="h-px flex-1 bg-slate-800"></div>
         </div>
 
