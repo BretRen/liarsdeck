@@ -354,16 +354,18 @@ export function useGameStore() {
     try {
       const msg = JSON.parse(e.data);
       if (msg.error) {
-        errorMsg.value = msg.error;
         showToast(msg.error);
-        connected.value = false;
-        hasJoinedRoom.value = false;
-        isDisconnected.value = false;
-        isReconnecting.value = false;
-        clearSession();
-        if (ws.value) {
-          ws.value.close();
-          ws.value = null;
+        if (!hasJoinedRoom.value || msg.error.includes('未找到房间') || msg.error.includes('Room not found')) {
+          errorMsg.value = msg.error;
+          connected.value = false;
+          hasJoinedRoom.value = false;
+          isDisconnected.value = false;
+          isReconnecting.value = false;
+          clearSession();
+          if (ws.value) {
+            ws.value.close();
+            ws.value = null;
+          }
         }
         return;
       }

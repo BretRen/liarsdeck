@@ -222,6 +222,7 @@ const dict = {
     eagle_eye_close: '继续',
     double_damage_banner: '猎枪生效中：下一次开枪判定连开两枪',
     armor_equipped_tag: '防弹衣',
+    armor_already_equipped: '已穿戴防弹衣',
     items_inventory_label: '道具',
     no_items_tip: '暂无道具',
 
@@ -462,8 +463,9 @@ const dict = {
     eagle_eye_close: 'Continue',
     double_damage_banner: 'Shotgun active: next gunshot fires twice',
     armor_equipped_tag: 'Vest',
+    armor_already_equipped: 'Vest already equipped',
     items_inventory_label: 'Items',
-    no_items_tip: 'No items',
+    no_items_tip: 'No Items',
 
     // Events shot details
     event_shot_badge_fatal: '💥 FATAL ROUND',

@@ -80,6 +80,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hasArmor: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['use-item']);
@@ -97,6 +101,9 @@ function getItemName(item) {
 }
 
 function getItemDesc(item) {
+  if (item === 'kevlar_armor' && props.hasArmor) {
+    return t('armor_already_equipped') || t('armor_equipped_tag');
+  }
   const map = {
     eagle_eye: t('item_eagle_eye_desc'),
     sawed_off: t('item_sawed_off_desc'),
@@ -110,6 +117,7 @@ function getItemDesc(item) {
 function isItemDisabled(item) {
   if (!props.isMyTurn) return true;
   if (item === 'eagle_eye' && !props.tableHasCards) return true;
+  if (item === 'kevlar_armor' && props.hasArmor) return true;
   return false;
 }
 

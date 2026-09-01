@@ -152,7 +152,7 @@ var AllItems = []model.ItemType{
 }
 
 func (g *Game) GrantRandomItem(p *model.Player) model.ItemType {
-	if len(p.Items) >= 2 {
+	if len(p.Items) >= 1 {
 		return ""
 	}
 	nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(AllItems))))
@@ -410,9 +410,6 @@ func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, erro
 		}, nil
 
 	case model.ItemKevlarArmor:
-		if p.HasArmor {
-			return nil, fmt.Errorf("已穿戴防弹衣 / Armor already equipped")
-		}
 		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
 		p.HasArmor = true
 		g.Log(fmt.Sprintf("%s 穿上了【防弹衣】 / %s equipped Vest", p.Nickname, p.Nickname))

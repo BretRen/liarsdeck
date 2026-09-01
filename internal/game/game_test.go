@@ -272,14 +272,10 @@ func TestGameItemsModeGrantAndUse(t *testing.T) {
 		t.Fatalf("expected 1 granted item, got %v", p1.Items)
 	}
 
-	// 2. 道具满 2 个时无法再获得
-	g.GrantRandomItem(p1)
-	if len(p1.Items) != 2 {
-		t.Fatalf("expected 2 items, got %d", len(p1.Items))
-	}
+	// 2. 道具满 1 个时无法再获得
 	overflowItem := g.GrantRandomItem(p1)
-	if overflowItem != "" || len(p1.Items) != 2 {
-		t.Fatalf("items should be capped at 2")
+	if overflowItem != "" || len(p1.Items) != 1 {
+		t.Fatalf("items should be capped at 1")
 	}
 
 	// 3. 测试防弹护甲使用

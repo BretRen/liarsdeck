@@ -54,6 +54,7 @@
       :items="myPlayer.items || []"
       :is-my-turn="isMyTurn"
       :table-has-cards="Boolean(state.last_played_cnt > 0)"
+      :has-armor="Boolean(myPlayer && myPlayer.has_armor)"
       @use-item="useItem"
     />
 
