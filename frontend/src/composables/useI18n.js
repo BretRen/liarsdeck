@@ -146,6 +146,28 @@ const dict = {
     logout_confirm: '确定要退出当前账号并登出吗？',
     logged_in_as: '已登录账号',
 
+    // Changelog
+    changelog_btn: '更新日志',
+    changelog_title: '版本更新日志',
+    changelog_subtitle: '查看各版本迭代与特性更新记录',
+    changelog_versions: '历史版本',
+    changelog_loading: '正在加载更新日志...',
+
+    // Volume & Ping
+    volume_label: '音量调节',
+    ping_label: '延迟',
+
+    // Public Rooms
+    public_rooms_title: '公开对局大厅',
+    public_rooms_subtitle: '在线牌桌实时列表，点击即可免码快速加入',
+    public_rooms_empty: '当前暂无开放牌桌，快来创建第一间吧！',
+    quick_join_btn: '快速入座',
+    refresh_btn: '刷新',
+    room_host: '房主',
+    table_status_waiting: '等待中',
+    table_status_playing: '对局中',
+    table_players: '人数',
+
     // Logs
     battle_log_title: '对局动态',
 
@@ -298,6 +320,28 @@ const dict = {
     logout_btn: 'Logout',
     logout_confirm: 'Are you sure you want to sign out?',
     logged_in_as: 'Signed in as',
+
+    // Changelog
+    changelog_btn: 'Changelog',
+    changelog_title: 'Release Changelog',
+    changelog_subtitle: 'Browse features and release history',
+    changelog_versions: 'VERSIONS',
+    changelog_loading: 'Loading changelog...',
+
+    // Volume & Ping
+    volume_label: 'Volume',
+    ping_label: 'Ping',
+
+    // Public Rooms
+    public_rooms_title: 'Public Tables',
+    public_rooms_subtitle: 'Browse active tables and jump in instantly',
+    public_rooms_empty: 'No active tables yet. Host one now!',
+    quick_join_btn: 'Join Table',
+    refresh_btn: 'Refresh',
+    room_host: 'Host',
+    table_status_waiting: 'Waiting',
+    table_status_playing: 'In Game',
+    table_players: 'Players',
 
     // Logs
     battle_log_title: 'Action Log',

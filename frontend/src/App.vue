@@ -15,11 +15,14 @@
     </transition>
 
     <!-- View Switcher -->
-    <LobbyView v-if="!connected" @open-rules="showRules = true" />
-    <GameView v-else @open-rules="showRules = true" />
+    <LobbyView v-if="!connected" @open-rules="showRules = true" @open-changelog="showChangelog = true" />
+    <GameView v-else @open-rules="showRules = true" @open-changelog="showChangelog = true" />
 
     <!-- Rules Modal -->
     <RulesModal v-if="showRules" @close="showRules = false" />
+
+    <!-- Changelog Modal (Markdown Rendering) -->
+    <ChangelogModal v-if="showChangelog" @close="showChangelog = false" />
 
     <!-- Admin Console (Ctrl + X) -->
     <AdminModal :is-open="showAdmin" @close="showAdmin = false" />
@@ -51,6 +54,7 @@ import LobbyView from './views/LobbyView.vue';
 import GameView from './views/GameView.vue';
 import RulesModal from './components/RulesModal.vue';
 import AdminModal from './components/AdminModal.vue';
+import ChangelogModal from './components/ChangelogModal.vue';
 import PauseModal from './components/PauseModal.vue';
 import DisconnectModal from './components/DisconnectModal.vue';
 import LoginModal from './components/LoginModal.vue';
@@ -59,6 +63,7 @@ const { t } = useI18n();
 const { handleCallback } = useAuth();
 const showRules = ref(false);
 const showAdmin = ref(false);
+const showChangelog = ref(false);
 const { connected, toast, globalBroadcast, dismissBroadcast } = useGameStore();
 
 function onKeyDown(e) {

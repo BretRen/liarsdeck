@@ -51,7 +51,20 @@
         ></div>
       </div>
 
-      <div class="flex items-center justify-between text-xs font-semibold px-0.5">
+      <!-- Disconnect Grace Countdown Bar -->
+      <div v-if="player.is_alive && player.is_connected === false" class="flex flex-col gap-0.5 p-1 bg-rose-950/50 border border-rose-800/70 rounded-md">
+        <div class="flex items-center justify-between text-[9px] text-rose-300 font-mono font-bold px-0.5">
+          <span>{{ t('offline_tag') }}</span>
+          <span>{{ player.disconnect_grace_remaining !== undefined ? player.disconnect_grace_remaining : 30 }}s</span>
+        </div>
+        <progress
+          class="progress progress-error w-full h-1 bg-slate-950"
+          :value="player.disconnect_grace_remaining !== undefined ? player.disconnect_grace_remaining : 30"
+          max="30"
+        ></progress>
+      </div>
+
+      <div v-else class="flex items-center justify-between text-xs font-semibold px-0.5">
         <div v-if="player.is_alive" class="flex items-center gap-1 text-slate-400">
           <span class="text-[11px]">{{ t('hand_count_label') }}:</span>
           <span class="text-slate-200 font-bold font-mono">{{ player.hand ? player.hand.length : 0 }}</span>

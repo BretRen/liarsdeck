@@ -126,3 +126,53 @@ func TestRemovePlayerOffline(t *testing.T) {
 		t.Fatalf("expected Host to remain, got %s", r.Game.State.Players[0].Nickname)
 	}
 }
+
+func TestHubGetPublicRooms(t *testing.T) {
+	hub := NewHub()
+	r := hub.CreateRoom()
+	c := &Client{ID: "p1", Nickname: "Alice", Room: r, Send: make(chan []byte, 10)}
+	r.AddClient(c)
+
+	p1 := &model.Player{ID: "p1", Nickname: "Alice", IsHost: true, IsAlive: true, ClientRef: c}
+	r.Game.State.Players = []*model.Player{p1}
+
+	rooms := hub.GetPublicRooms()
+	if len(rooms) != 1 {
+		t.Fatalf("expected 1 public room, got %d", len(rooms))
+	}
+	if rooms[0].RoomCode != r.Code || rooms[0].HostName != "Alice" {
+		t.Fatalf("unexpected room summary: %+v", rooms[0])
+	}
+}
+
+func TestPingHandling(t *testing.T) {
+	hub := NewHub()
+	r := hub.CreateRoom()
+	c := &Client{ID: "p1", Nickname: "Alice", Room: r, Send: make(chan []byte, 10)}
+
+	pingPayload, _ := json.Marshal(model.PingPayload{ClientTime: 1234567890})
+	r.HandleClientMessage(c, model.WSMessage{
+		Action:  "ping",
+		Payload: pingPayload,
+	})
+
+	select {
+	case msg := <-c.Send:
+		var pong struct {
+			Type string `json:"type"`
+			Data struct {
+				ClientTime int64 `json:"client_time"`
+				ServerTime int64 `json:"server_time"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(msg, &pong); err != nil {
+			t.Fatalf("failed to unmarshal pong: %v", err)
+		}
+		if pong.Type != "pong" || pong.Data.ClientTime != 1234567890 {
+			t.Fatalf("unexpected pong payload: %+v", pong)
+		}
+	default:
+		t.Fatalf("expected pong in c.Send")
+	}
+}
+

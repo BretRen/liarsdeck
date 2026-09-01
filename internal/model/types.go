@@ -126,3 +126,16 @@ type ShotEvent struct {
 	Target string `json:"target"`
 	Fatal  bool   `json:"fatal"`
 }
+
+type RoomSummary struct {
+	RoomCode    string `json:"room_code"`
+	HostName    string `json:"host_name"`
+	PlayerCount int    `json:"player_count"`
+	MaxPlayers  int    `json:"max_players"`
+	Status      string `json:"status"`
+	CreatedAt   int64  `json:"created_at"`
+}
+
+type PingPayload struct {
+	ClientTime int64 `json:"client_time"`
+}

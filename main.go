@@ -42,6 +42,7 @@ func main() {
 	hub := room.NewHub()
 	wsHandler := handler.NewWSHandler(hub)
 	adminHandler := handler.NewAdminHandler(hub, port)
+	changelogHandler := handler.NewChangelogHandler("changelogs")
 
 	e := echo.New()
 	e.HideBanner = true
@@ -92,6 +93,18 @@ func main() {
 	e.GET("/api/version", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"version": handler.GetVersion(),
+		})
+	})
+
+	// 更新日志 API
+	e.GET("/api/changelogs", changelogHandler.GetChangelogList)
+	e.GET("/api/changelogs/:version", changelogHandler.GetChangelogContent)
+
+	// 公开大厅房间列表 API
+	e.GET("/api/rooms", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]any{
+			"success": true,
+			"rooms":   hub.GetPublicRooms(),
 		})
 	})
 

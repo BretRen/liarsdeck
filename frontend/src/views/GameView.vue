@@ -1,12 +1,15 @@
 <template>
-  <div class="flex flex-col min-h-[90vh] max-w-5xl mx-auto w-full">
+  <div
+    class="flex flex-col min-h-[90vh] max-w-5xl mx-auto w-full transition-transform"
+    :class="{ 'animate-screen-shake': isScreenShaking }"
+  >
     <!-- Header Bar -->
     <HeaderBar
       :room-code="state.room_code || myRoomCode"
       :status="state.status"
       :deadline="state.deadline"
-      :current-unix="currentUnix"
       @open-rules="$emit('open-rules')"
+      @open-changelog="$emit('open-changelog')"
       @leave="onLeave"
     />
 
@@ -88,7 +91,7 @@ import ActionBar from '../components/ActionBar.vue';
 import EventOverlay from '../components/EventOverlay.vue';
 import LogPanel from '../components/LogPanel.vue';
 
-defineEmits(['open-rules']);
+defineEmits(['open-rules', 'open-changelog']);
 const { t } = useI18n();
 const {
   state,
@@ -109,6 +112,7 @@ const {
   canCallLiar,
   canStart,
   allReady,
+  isScreenShaking,
   toggleCardSelect,
   playCards,
   callLiar,

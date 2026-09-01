@@ -40,10 +40,13 @@ const toast = ref('');
 const errorMsg = ref('');
 const pendingState = ref(null);
 const globalBroadcast = ref({ message: '', timestamp: 0, visible: false });
+const myPing = ref(0);
+const isScreenShaking = ref(false);
 
 let toastTimer = null;
 let reconnectTimer = null;
 let broadcastTimer = null;
+let pingInterval = null;
 
 const SESSION_KEY = 'liarsdeck_active_session';
 
@@ -155,14 +158,19 @@ export function useGameStore() {
 
     if (ev.type === 'liar_call') {
       audio.playLiarAlert();
+      audio.playHeartbeat();
     } else if (ev.type === 'shot') {
       if (ev.data.fatal) {
         audio.playGunshot();
+        isScreenShaking.value = true;
+        setTimeout(() => {
+          isScreenShaking.value = false;
+        }, 700);
       } else {
         audio.playGunClick();
       }
     } else if (ev.type === 'reveal') {
-      audio.playCardDeal();
+      audio.playCardFlip();
     }
 
     const dur = { liar_call: 1900, reveal: 2400, shot: 2200 };
@@ -226,9 +234,21 @@ export function useGameStore() {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
+      if (pingInterval) clearInterval(pingInterval);
+      pingInterval = setInterval(() => {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send(JSON.stringify({ action: 'ping', payload: { client_time: Date.now() } }));
+        }
+      }, 3000);
+      // 立即触发一次
+      ws.value.send(JSON.stringify({ action: 'ping', payload: { client_time: Date.now() } }));
     };
 
     socket.onclose = () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+      }
       // 只有在已成功加入房间且非主动退出的情况下，网络意外断开才弹窗重连
       if (hasJoinedRoom.value) {
         isDisconnected.value = true;
@@ -271,7 +291,19 @@ export function useGameStore() {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
+      if (pingInterval) clearInterval(pingInterval);
+      pingInterval = setInterval(() => {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send(JSON.stringify({ action: 'ping', payload: { client_time: Date.now() } }));
+        }
+      }, 3000);
+      ws.value.send(JSON.stringify({ action: 'ping', payload: { client_time: Date.now() } }));
+
       newWs.onclose = () => {
+        if (pingInterval) {
+          clearInterval(pingInterval);
+          pingInterval = null;
+        }
         if (hasJoinedRoom.value) {
           isDisconnected.value = true;
           isReconnecting.value = true;
@@ -301,6 +333,13 @@ export function useGameStore() {
         if (ws.value) {
           ws.value.close();
           ws.value = null;
+        }
+        return;
+      }
+
+      if (msg.type === 'pong') {
+        if (msg.data && msg.data.client_time) {
+          myPing.value = Math.max(1, Date.now() - msg.data.client_time);
         }
         return;
       }
@@ -513,5 +552,7 @@ export function useGameStore() {
     clearSession,
     globalBroadcast,
     dismissBroadcast,
+    myPing,
+    isScreenShaking,
   };
 }

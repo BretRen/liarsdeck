@@ -11,19 +11,21 @@ import (
 )
 
 type Room struct {
-	Code    string
-	Clients map[*Client]bool
-	Game    *game.Game
-	Hub     *Hub
-	mu      sync.Mutex
+	Code      string
+	Clients   map[*Client]bool
+	Game      *game.Game
+	Hub       *Hub
+	CreatedAt int64
+	mu        sync.Mutex
 }
 
 func NewRoom(code string, hub *Hub) *Room {
 	return &Room{
-		Code:    code,
-		Clients: make(map[*Client]bool),
-		Game:    game.NewGame(code),
-		Hub:     hub,
+		Code:      code,
+		Clients:   make(map[*Client]bool),
+		Game:      game.NewGame(code),
+		Hub:       hub,
+		CreatedAt: time.Now().Unix(),
 	}
 }
 
@@ -177,6 +179,23 @@ func (r *Room) RemoveClient(client *Client) {
 }
 
 func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
+	if msg.Action == "ping" {
+		var req model.PingPayload
+		_ = json.Unmarshal(msg.Payload, &req)
+		respPayload, _ := json.Marshal(map[string]any{
+			"type": "pong",
+			"data": map[string]any{
+				"client_time": req.ClientTime,
+				"server_time": time.Now().UnixMilli(),
+			},
+		})
+		select {
+		case c.Send <- respPayload:
+		default:
+		}
+		return
+	}
+
 	g := r.Game
 	g.Lock()
 

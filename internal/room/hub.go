@@ -4,6 +4,8 @@ import (
 	cryptorand "crypto/rand"
 	"math/big"
 	"sync"
+
+	"pdnode.com/play/liarsbar-web/internal/model"
 )
 
 type Hub struct {
@@ -83,3 +85,45 @@ func (h *Hub) BroadcastGlobal(eventType string, data any) int {
 	return len(rooms)
 }
 
+// GetPublicRooms 获取当前所有活跃房间的公开摘要列表
+func (h *Hub) GetPublicRooms() []model.RoomSummary {
+	h.mu.Lock()
+	rooms := make([]*Room, 0, len(h.Rooms))
+	for _, r := range h.Rooms {
+		rooms = append(rooms, r)
+	}
+	h.mu.Unlock()
+
+	summaries := make([]model.RoomSummary, 0, len(rooms))
+	for _, r := range rooms {
+		r.Game.Lock()
+		hostName := "Host"
+		playerCount := 0
+		for _, p := range r.Game.State.Players {
+			if !p.IsSpectator {
+				playerCount++
+			}
+			if p.IsHost {
+				hostName = p.Nickname
+			}
+		}
+		status := r.Game.State.Status
+		r.Game.Unlock()
+
+		r.mu.Lock()
+		clientCount := len(r.Clients)
+		r.mu.Unlock()
+
+		if clientCount > 0 {
+			summaries = append(summaries, model.RoomSummary{
+				RoomCode:    r.Code,
+				HostName:    hostName,
+				PlayerCount: playerCount,
+				MaxPlayers:  4,
+				Status:      status,
+				CreatedAt:   r.CreatedAt,
+			})
+		}
+	}
+	return summaries
+}
