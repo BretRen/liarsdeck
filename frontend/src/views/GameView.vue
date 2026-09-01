@@ -96,55 +96,17 @@
       :step-data="currentStepData"
     />
 
-    <!-- Item VFX & Emoji Particle Blast Overlay -->
-    <Transition name="item-vfx">
-      <div
-        v-if="itemUsedEvent"
-        class="fixed inset-0 pointer-events-none z-[1550] flex items-center justify-center overflow-hidden"
-      >
-        <!-- Full-screen ambient item aura -->
-        <div
-          class="absolute inset-0 transition-opacity duration-500 opacity-25 animate-pulse"
-          :class="getItemAuraBg(itemUsedEvent?.item)"
-        ></div>
-
-        <!-- Central Burst Graphic & Emojis -->
-        <div class="relative flex items-center justify-center">
-          <div
-            v-for="(em, idx) in getItemEmojis(itemUsedEvent?.item)"
-            :key="idx"
-            class="absolute text-3xl md:text-4xl select-none animate-item-particle"
-            :style="{
-              '--angle': `${(idx * 72) + 15}deg`,
-              '--dist': `${85 + (idx % 2) * 35}px`,
-              '--delay': `${idx * 0.06}s`
-            }"
-          >
-            {{ em }}
-          </div>
-
-          <!-- Central Glowing Core Icon -->
-          <div
-            class="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-2xl backdrop-blur-md animate-item-core border"
-            :class="getItemCoreClass(itemUsedEvent?.item)"
-          >
-            {{ getItemIcon(itemUsedEvent?.item) }}
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- Item Used Notification Toast -->
+    <!-- Item Used Notification Toast (Clean Dark Aesthetic) -->
     <Transition name="item-toast">
       <div
         v-if="itemUsedEvent"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1600] flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/95 border border-amber-500/60 shadow-2xl shadow-black/60 backdrop-blur-xl select-none"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1600] flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/95 border border-indigo-500/50 shadow-2xl shadow-black/80 backdrop-blur-xl select-none"
       >
-        <div class="item-used-icon w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs shrink-0">
-          {{ getItemIcon(itemUsedEvent?.item) }}
+        <div class="item-used-icon w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+          <ItemIcon :item="itemUsedEvent?.item" class="w-4 h-4" />
         </div>
         <div class="flex flex-col text-left">
-          <span class="text-[11px] font-bold text-amber-300 leading-tight">
+          <span class="text-[11px] font-bold text-indigo-400/90 leading-tight">
             {{ t('item_used_by', { user: itemUsedEvent?.nickname || 'Player' }) }}
           </span>
           <span class="text-xs font-bold text-slate-100">{{ getItemName(itemUsedEvent?.item) }}</span>
@@ -197,23 +159,25 @@ import ItemBar from '../components/ItemBar.vue';
 import EventOverlay from '../components/EventOverlay.vue';
 import LogPanel from '../components/LogPanel.vue';
 
+import ItemIcon from '../components/ItemIcon.vue';
+
 defineEmits(['open-rules', 'open-changelog']);
+
 const { t } = useI18n();
 const {
-  state,
-  currentUnix,
-  selectedIndexes,
-  currentStep,
-  currentStepData,
-  myNickname,
   myId,
+  myNickname,
   myRoomCode,
-  myPlayer,
-  myHand,
   isPlayer,
   isSpectator,
   amHost,
+  myPlayer,
+  state,
+  myHand,
   isMyTurn,
+  selectedIndexes,
+  currentStep,
+  currentStepData,
   canPlay,
   canCallLiar,
   canStart,
@@ -234,44 +198,6 @@ const {
   disconnect,
 } = useGameStore();
 
-function getItemIcon(item) {
-  const icons = { eagle_eye: '🔍', sawed_off: '⚡', hard_liquor: '🍺', kevlar_armor: '🛡', fate_shift: '🎲' };
-  return icons[item] || '?';
-}
-
-function getItemEmojis(item) {
-  const map = {
-    eagle_eye: ['🔍', '✨', '👁️', '🔎', '💫'],
-    sawed_off: ['⚡', '💥', '🔥', '💨', '⚡'],
-    hard_liquor: ['🍺', '🫧', '🍻', '✨', '🫧'],
-    kevlar_armor: ['🛡️', '💠', '🔷', '⚡', '✨'],
-    fate_shift: ['🎲', '💫', '🌟', '✨', '🎯'],
-  };
-  return map[item] || ['✨', '🎁', '✨', '💫', '✨'];
-}
-
-function getItemAuraBg(item) {
-  const map = {
-    eagle_eye: 'bg-amber-500/20',
-    sawed_off: 'bg-rose-600/25',
-    hard_liquor: 'bg-yellow-500/20',
-    kevlar_armor: 'bg-sky-500/20',
-    fate_shift: 'bg-purple-600/20',
-  };
-  return map[item] || 'bg-indigo-600/20';
-}
-
-function getItemCoreClass(item) {
-  const map = {
-    eagle_eye: 'bg-amber-950/80 border-amber-400/80 shadow-amber-500/40 text-amber-300',
-    sawed_off: 'bg-rose-950/80 border-rose-400/80 shadow-rose-500/50 text-rose-300',
-    hard_liquor: 'bg-yellow-950/80 border-yellow-400/80 shadow-yellow-500/40 text-yellow-300',
-    kevlar_armor: 'bg-sky-950/80 border-sky-400/80 shadow-sky-500/40 text-sky-300',
-    fate_shift: 'bg-purple-950/80 border-purple-400/80 shadow-purple-500/40 text-purple-300',
-  };
-  return map[item] || 'bg-slate-900 border-slate-700 text-slate-100';
-}
-
 function getItemName(item) {
   if (!item) return '';
   const key = `item_${item}_name`;
@@ -286,54 +212,6 @@ function onLeave() {
 </script>
 
 <style scoped>
-/* Item VFX Animations */
-.item-vfx-enter-active {
-  animation: itemVfxIn 0.3s ease-out both;
-}
-.item-vfx-leave-active {
-  animation: itemVfxOut 0.4s ease-in both;
-}
-@keyframes itemVfxIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes itemVfxOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
-
-@keyframes itemCoreSpin {
-  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-  40% { transform: scale(1.25) rotate(15deg); opacity: 1; }
-  70% { transform: scale(0.95) rotate(-5deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-.animate-item-core {
-  animation: itemCoreSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes itemParticleFly {
-  0% {
-    transform: rotate(var(--angle)) translateY(0px) scale(0);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -0.6)) scale(1.3);
-  }
-  70% {
-    opacity: 1;
-    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -1)) scale(1.1);
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateY(calc(var(--dist) * -1.35)) scale(0.5);
-  }
-}
-.animate-item-particle {
-  animation: itemParticleFly 1.8s cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
-}
-
 /* Item Used Toast Transition */
 .item-toast-enter-active {
   animation: itemToastIn 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -342,22 +220,21 @@ function onLeave() {
   animation: itemToastOut 0.3s ease both;
 }
 @keyframes itemToastIn {
-  from { opacity: 0; transform: translate(-50%, 24px) scale(0.88); }
+  from { opacity: 0; transform: translate(-50%, 20px) scale(0.92); }
   to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 @keyframes itemToastOut {
   from { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  to   { opacity: 0; transform: translate(-50%, -12px) scale(0.92); }
+  to   { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
 }
 
 /* Icon pulse when toast appears */
 .item-used-icon {
-  animation: iconPulse 0.5s ease 0.1s both;
+  animation: iconPulse 0.4s ease 0.05s both;
 }
 @keyframes iconPulse {
   0%   { transform: scale(1); }
-  40%  { transform: scale(1.35); }
-  70%  { transform: scale(0.9); }
+  45%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
 </style>

@@ -26,8 +26,8 @@
         <template v-if="items[0]">
           <div class="flex items-center justify-between w-full gap-3">
             <div class="flex items-center gap-2.5 overflow-hidden">
-              <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-sm shrink-0">
-                {{ getItemIcon(items[0]) }}
+              <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <ItemIcon :item="items[0]" class="w-4 h-4" />
               </div>
               <div class="flex flex-col text-left overflow-hidden">
                 <span class="font-bold text-xs text-slate-100 truncate">
@@ -65,6 +65,7 @@
 
 <script setup>
 import { useI18n } from '../composables/useI18n';
+import ItemIcon from './ItemIcon.vue';
 
 const props = defineProps({
   items: {
@@ -83,11 +84,6 @@ const props = defineProps({
 
 const emit = defineEmits(['use-item']);
 const { t } = useI18n();
-
-function getItemIcon(item) {
-  const icons = { eagle_eye: '🔍', sawed_off: '⚡', hard_liquor: '🍺', kevlar_armor: '🛡️', fate_shift: '🎲' };
-  return icons[item] || '🎁';
-}
 
 function getItemName(item) {
   const map = {

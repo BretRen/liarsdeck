@@ -80,26 +80,22 @@
           ]"
         >
           <!-- Central Hub -->
-          <div class="absolute w-7 h-7 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
-            <span v-if="stepData.armor_blocked" class="text-xs">🛡️</span>
-            <span v-else-if="stepData.double_shot" class="text-xs text-amber-400 font-black">
-              {{ shotStage === 1 ? '①' : '②' }}
+          <div class="absolute w-7 h-7 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300">
+            <svg v-if="stepData.armor_blocked" class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span v-else-if="stepData.double_shot" class="text-xs text-amber-400 font-mono font-black">
+              {{ shotStage }}/2
             </span>
           </div>
 
-          <!-- Double Shot Muzzle Flashes -->
+          <!-- Double Shot Muzzle Glow Burst -->
           <div
             v-if="stepData.double_shot && shotStage === 1"
-            class="absolute -top-3 text-amber-400 text-base animate-ping select-none"
-          >
-            💥
-          </div>
+            class="absolute -top-3 w-4 h-4 rounded-full bg-amber-400/80 shadow-[0_0_16px_rgba(251,191,36,1)] animate-ping"
+          ></div>
           <div
             v-if="stepData.double_shot && shotStage === 2"
-            class="absolute -top-3 text-rose-500 text-lg animate-ping select-none"
-          >
-            🔥
-          </div>
+            class="absolute -top-3 w-5 h-5 rounded-full bg-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,1)] animate-ping"
+          ></div>
 
           <!-- 6 chambers arranged in a circle -->
           <div
@@ -120,16 +116,16 @@
         >
           <template v-if="stepData.double_shot">
             <span v-if="shotStage === 1" class="text-amber-300">
-              ⚡ {{ lang === 'zh' ? '第 1 发扣击：空枪！' : '1st Shot: CLICK!' }}
+              {{ lang === 'zh' ? '第 1 发扣击：空枪！' : '1st Shot: CLICK!' }}
             </span>
             <span v-else-if="stepData.fatal" class="text-rose-400">
-              💥 {{ lang === 'zh' ? '第 2 发扣击：中弹！' : '2nd Shot: BANG!' }}
+              {{ lang === 'zh' ? '第 2 发扣击：中弹！' : '2nd Shot: BANG!' }}
             </span>
             <span v-else-if="stepData.armor_blocked" class="text-sky-300">
-              🛡️ {{ t('event_shot_badge_armor') }}
+              {{ t('event_shot_badge_armor') }}
             </span>
             <span v-else class="text-emerald-400">
-              🛡️ {{ lang === 'zh' ? '第 2 发扣击：幸存！' : '2nd Shot: SURVIVED!' }}
+              {{ lang === 'zh' ? '第 2 发扣击：幸存！' : '2nd Shot: SURVIVED!' }}
             </span>
           </template>
           <template v-else-if="stepData.fatal">
