@@ -10,6 +10,20 @@
         {{ t('invite_btn') }}
       </button>
 
+      <!-- Room Mode Badge -->
+      <span
+        v-if="store.state.value.game_mode === 'items'"
+        class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px] font-bold tracking-wide"
+      >
+        道具
+      </span>
+      <span
+        v-else
+        class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 text-[9px] font-bold tracking-wide"
+      >
+        普通
+      </span>
+
       <!-- Network Latency Ping Badge -->
       <div v-if="store.myPing.value > 0" class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/60 border border-slate-800 text-[10px] font-mono font-bold" :class="pingColorClass" :title="`${t('ping_label')}: ${store.myPing.value}ms`">
         <span class="w-1.5 h-1.5 rounded-full" :class="pingDotClass"></span>

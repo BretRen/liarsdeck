@@ -1,0 +1,133 @@
+<template>
+  <div class="p-3 mb-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl shadow-xl shadow-black/50 backdrop-blur-xl w-full">
+    <!-- 顶栏小标签 -->
+    <div class="flex items-center justify-between mb-2.5 px-0.5 text-[11px] font-bold text-slate-400">
+      <div class="flex items-center gap-1.5">
+        <span class="tracking-wider text-slate-300">{{ t('items_inventory_label') }}</span>
+        <span class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 font-mono">
+          {{ items.length }}/2
+        </span>
+      </div>
+      <span v-if="items.length === 0" class="text-[10px] text-slate-500">
+        {{ t('no_items_tip') }}
+      </span>
+      <span v-else-if="!isMyTurn" class="text-[10px] text-slate-500">
+        {{ t('item_disabled_not_turn') }}
+      </span>
+    </div>
+
+    <!-- 2 格道具槽位 -->
+    <div class="grid grid-cols-2 gap-2.5 w-full">
+      <div
+        v-for="slotIdx in [0, 1]"
+        :key="slotIdx"
+        class="h-12 rounded-xl border transition-all duration-200 relative flex items-center p-2.5"
+        :class="getSlotClass(items[slotIdx])"
+      >
+        <!-- 槽位有道具 -->
+        <template v-if="items[slotIdx]">
+          <div class="flex items-center justify-between w-full gap-2">
+            <div class="flex flex-col text-left overflow-hidden">
+              <span class="font-bold text-xs text-slate-100 truncate">
+                {{ getItemName(items[slotIdx]) }}
+              </span>
+              <span class="text-[10px] text-slate-400 truncate max-w-[130px]" :title="getItemDesc(items[slotIdx])">
+                {{ getItemDesc(items[slotIdx]) }}
+              </span>
+            </div>
+
+            <!-- 使用按钮 -->
+            <button
+              type="button"
+              class="btn btn-xs shrink-0 font-bold px-3 transition-all"
+              :class="getButtonClass(items[slotIdx])"
+              :disabled="isItemDisabled(items[slotIdx])"
+              @click="onUse(items[slotIdx])"
+            >
+              使用
+            </button>
+          </div>
+        </template>
+
+        <!-- 空槽位 -->
+        <template v-else>
+          <div class="flex items-center justify-center w-full text-slate-600 text-xs font-mono">
+            <span class="text-[11px] font-semibold tracking-wide">空</span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useI18n } from '../composables/useI18n';
+
+const props = defineProps({
+  items: {
+    type: Array,
+    default: () => [],
+  },
+  isMyTurn: {
+    type: Boolean,
+    default: false,
+  },
+  tableHasCards: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(['use-item']);
+const { t } = useI18n();
+
+function getItemName(item) {
+  const map = {
+    eagle_eye: t('item_eagle_eye_name'),
+    sawed_off: t('item_sawed_off_name'),
+    hard_liquor: t('item_hard_liquor_name'),
+    kevlar_armor: t('item_kevlar_armor_name'),
+    fate_shift: t('item_fate_shift_name'),
+  };
+  return map[item] || item;
+}
+
+function getItemDesc(item) {
+  const map = {
+    eagle_eye: t('item_eagle_eye_desc'),
+    sawed_off: t('item_sawed_off_desc'),
+    hard_liquor: t('item_hard_liquor_desc'),
+    kevlar_armor: t('item_kevlar_armor_desc'),
+    fate_shift: t('item_fate_shift_desc'),
+  };
+  return map[item] || '';
+}
+
+function isItemDisabled(item) {
+  if (!props.isMyTurn) return true;
+  if (item === 'eagle_eye' && !props.tableHasCards) return true;
+  return false;
+}
+
+function getSlotClass(item) {
+  if (!item) {
+    return 'bg-slate-950/40 border-dashed border-slate-800/80';
+  }
+  if (!props.isMyTurn) {
+    return 'bg-slate-900/60 border-slate-800 opacity-80';
+  }
+  return 'bg-slate-900/90 border-indigo-700/50 shadow-sm shadow-indigo-950/30';
+}
+
+function getButtonClass(item) {
+  if (isItemDisabled(item)) {
+    return 'btn-disabled bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed';
+  }
+  return 'btn-primary bg-indigo-600 hover:bg-indigo-500 border-none text-white shadow-sm active:scale-95';
+}
+
+function onUse(item) {
+  if (isItemDisabled(item)) return;
+  emit('use-item', item);
+}
+</script>

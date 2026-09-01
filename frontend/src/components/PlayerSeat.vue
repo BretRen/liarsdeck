@@ -72,6 +72,24 @@
         <div v-else class="text-rose-400 font-bold text-[11px]">
           {{ t('dead_tag') }}
         </div>
+
+        <!-- 道具 & 防弹衣标识 -->
+        <div v-if="player.is_alive" class="flex items-center gap-1">
+          <span
+            v-if="player.has_armor"
+            class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px]"
+            title="防弹衣 (抵消一次致命实弹)"
+          >
+            防弹衣
+          </span>
+          <span
+            v-if="player.item_count || (player.items && player.items.length)"
+            class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 text-[9px] font-mono"
+            :title="`持有 ${player.item_count || player.items.length} 个道具`"
+          >
+            道具:{{ player.item_count || player.items.length }}
+          </span>
+        </div>
       </div>
 
       <!-- Ready Status during Waiting Phase -->
