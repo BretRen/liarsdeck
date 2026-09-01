@@ -113,7 +113,7 @@
               type="text"
               :placeholder="t('room_code_ph')"
               maxlength="6"
-              class="input input-bordered w-full h-11 text-center font-bold tracking-widest text-base bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 uppercase font-mono"
+              class="input input-bordered w-full h-11 px-3.5 bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 text-sm font-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-500"
               @input="roomCodeInput = roomCodeInput.toUpperCase()"
               @keyup.enter="onJoinRoom"
             />
@@ -137,7 +137,7 @@
               type="text"
               :placeholder="t('room_code_ph')"
               maxlength="6"
-              class="input input-bordered w-full h-11 text-center font-bold tracking-widest text-base bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 uppercase font-mono"
+              class="input input-bordered w-full h-11 px-3.5 bg-slate-950/80 border-slate-800 text-slate-100 focus:border-indigo-500 text-sm font-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-500"
               @input="roomCodeInput = roomCodeInput.toUpperCase()"
               @keyup.enter="onSpectateRoom"
             />
