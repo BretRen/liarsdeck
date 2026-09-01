@@ -43,6 +43,10 @@ const globalBroadcast = ref({ message: '', timestamp: 0, visible: false });
 const myPing = ref(0);
 const isScreenShaking = ref(false);
 const isFatalShotActive = ref(false);
+const inspectedCard = ref('');
+const showEagleEyeModal = ref(false);
+const itemUsedEvent = ref(null); // { nickname, item } — cleared after 2.4s
+let itemUsedTimer = null;
 
 let toastTimer = null;
 let reconnectTimer = null;
@@ -105,8 +109,10 @@ export function useGameStore() {
   const amHost = computed(() => myPlayer.value && myPlayer.value.is_host);
 
   const isMyTurn = computed(() => {
-    if (state.value.status !== 'playing' || !state.value.players || state.value.current_turn === -1 || !myPlayer.value) return false;
-    return state.value.players[state.value.current_turn]?.id === myId.value;
+    if (state.value.status !== 'playing' || !state.value.players || state.value.current_turn === -1) return false;
+    const turnPlayer = state.value.players[state.value.current_turn];
+    if (!turnPlayer) return false;
+    return myPlayerToken.value !== '' && turnPlayer.id === myPlayerToken.value;
   });
 
   const remainingSeconds = computed(() => {
@@ -211,7 +217,7 @@ export function useGameStore() {
   }
 
   // ── WebSocket Connect ──
-  function connect(action, roomCode, name, token = '') {
+  function connect(action, roomCode, name, token = '', options = {}) {
     errorMsg.value = '';
     myNickname.value = name;
     if (roomCode) myRoomCode.value = roomCode;
@@ -222,6 +228,8 @@ export function useGameStore() {
     let url = `${proto}://${host}/ws?action=${action}&name=${encodeURIComponent(name)}`;
     if (roomCode) url += `&code=${encodeURIComponent(roomCode)}`;
     if (token) url += `&token=${encodeURIComponent(token)}`;
+    if (options.mode) url += `&mode=${encodeURIComponent(options.mode)}`;
+    if (options.maxPlayers) url += `&max_players=${encodeURIComponent(options.maxPlayers)}`;
 
     doConnect(url);
   }
@@ -350,6 +358,8 @@ export function useGameStore() {
       }
 
       if (msg.type === 'game_state') {
+        const wasReconnecting = isReconnecting.value || isDisconnected.value;
+
         hasJoinedRoom.value = true;
         connected.value = true;
         isDisconnected.value = false;
@@ -373,6 +383,15 @@ export function useGameStore() {
 
         if (msg.data.room_code) {
           myRoomCode.value = msg.data.room_code;
+        }
+
+        // On reconnect: force-flush any stale animation queue so the new state
+        // from the server is applied immediately and isMyTurn is correct.
+        if (wasReconnecting) {
+          eventQueue.value = [];
+          pendingState.value = null;
+          currentStep.value = '';
+          processingEvent.value = false;
         }
 
         // If there are ongoing or queued animations, delay state commit and victory fanfare
@@ -399,6 +418,27 @@ export function useGameStore() {
       } else if (['liar_call', 'reveal', 'shot'].includes(msg.type)) {
         eventQueue.value.push({ type: msg.type, data: msg.data });
         processQueue();
+      } else if (msg.type === 'eagle_eye_result') {
+        if (msg.data && msg.data.card) {
+          inspectedCard.value = msg.data.card;
+          showEagleEyeModal.value = true;
+          audio.playCardFlip();
+        }
+      } else if (msg.type === 'item_used') {
+        if (msg.data && msg.data.item) {
+          // Play sound
+          if (msg.data.item === 'sawed_off') {
+            audio.playGunClick();
+          } else if (msg.data.item === 'hard_liquor' || msg.data.item === 'fate_shift') {
+            audio.playCardFlip();
+          } else {
+            audio.playLiarAlert();
+          }
+          // Trigger visual notification
+          if (itemUsedTimer) clearTimeout(itemUsedTimer);
+          itemUsedEvent.value = { nickname: msg.data.nickname || '?', item: msg.data.item };
+          itemUsedTimer = setTimeout(() => { itemUsedEvent.value = null; }, 2400);
+        }
       } else if (msg.type === 'server_broadcast') {
         if (msg.data && msg.data.message) {
           showBroadcast(msg.data.message);
@@ -507,6 +547,15 @@ export function useGameStore() {
     myPlayerToken.value = '';
   }
 
+  function useItem(itemType) {
+    sendAction('use_item', { item: itemType });
+  }
+
+  function closeEagleEyeModal() {
+    showEagleEyeModal.value = false;
+    inspectedCard.value = '';
+  }
+
   function disconnect() {
     exitToLobby();
   }
@@ -560,5 +609,10 @@ export function useGameStore() {
     myPing,
     isScreenShaking,
     isFatalShotActive,
+    inspectedCard,
+    showEagleEyeModal,
+    closeEagleEyeModal,
+    useItem,
+    itemUsedEvent,
   };
 }
