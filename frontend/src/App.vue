@@ -1,5 +1,13 @@
 <template>
-  <div class="app-root">
+  <div class="app-root min-h-screen" :class="{ 'animate-screen-shake': isScreenShaking }">
+    <!-- Fullscreen Fatal Gunshot Flash & Blood Vignette -->
+    <transition name="toast-fade">
+      <div v-if="isFatalShotActive" class="fatal-blood-overlay">
+        <div class="fatal-flash absolute inset-0"></div>
+        <div class="fatal-vignette absolute inset-0"></div>
+      </div>
+    </transition>
+
     <!-- Global Broadcast Banner -->
     <transition name="broadcast-slide">
       <div v-if="globalBroadcast.visible" class="global-broadcast-banner">
@@ -64,7 +72,7 @@ const { handleCallback } = useAuth();
 const showRules = ref(false);
 const showAdmin = ref(false);
 const showChangelog = ref(false);
-const { connected, toast, globalBroadcast, dismissBroadcast } = useGameStore();
+const { connected, toast, globalBroadcast, dismissBroadcast, isScreenShaking, isFatalShotActive } = useGameStore();
 
 function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {

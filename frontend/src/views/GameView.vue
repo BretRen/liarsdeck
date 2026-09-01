@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="flex flex-col min-h-[90vh] max-w-5xl mx-auto w-full transition-transform"
-    :class="{ 'animate-screen-shake': isScreenShaking }"
-  >
+  <div class="flex flex-col min-h-[90vh] max-w-5xl mx-auto w-full">
     <!-- Header Bar -->
     <HeaderBar
       :room-code="state.room_code || myRoomCode"

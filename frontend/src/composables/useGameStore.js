@@ -42,6 +42,7 @@ const pendingState = ref(null);
 const globalBroadcast = ref({ message: '', timestamp: 0, visible: false });
 const myPing = ref(0);
 const isScreenShaking = ref(false);
+const isFatalShotActive = ref(false);
 
 let toastTimer = null;
 let reconnectTimer = null;
@@ -162,10 +163,14 @@ export function useGameStore() {
     } else if (ev.type === 'shot') {
       if (ev.data.fatal) {
         audio.playGunshot();
+        isFatalShotActive.value = true;
         isScreenShaking.value = true;
         setTimeout(() => {
           isScreenShaking.value = false;
-        }, 700);
+        }, 750);
+        setTimeout(() => {
+          isFatalShotActive.value = false;
+        }, 2200);
       } else {
         audio.playGunClick();
       }
@@ -554,5 +559,6 @@ export function useGameStore() {
     dismissBroadcast,
     myPing,
     isScreenShaking,
+    isFatalShotActive,
   };
 }
