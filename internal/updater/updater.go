@@ -130,6 +130,22 @@ func PerformSelfUpdate(repo string, port string) error {
 		log.Printf("✅ [Updater] 前端静态资源 public/ 已同步替换")
 	}
 
+	// 更新 changelogs 目录（若解压目录存在）
+	srcChangelogs := filepath.Join(extractDir, "changelogs")
+	if !DirExists(srcChangelogs) {
+		_ = filepath.Walk(extractDir, func(p string, info os.FileInfo, err error) error {
+			if err == nil && info.IsDir() && info.Name() == "changelogs" {
+				srcChangelogs = p
+			}
+			return nil
+		})
+	}
+	if DirExists(srcChangelogs) {
+		dstChangelogs := filepath.Join(cwd, "changelogs")
+		_ = CopyDir(srcChangelogs, dstChangelogs)
+		log.Printf("✅ [Updater] 更新日志 changelogs/ 已同步替换")
+	}
+
 	// 6. 启动新版本子进程（传入 --wait-pid 确保旧进程退出并释放端口后再绑定）
 	log.Printf("🚀 [Updater] 正在启动新版本服务进程: %s ...", execPath)
 	cmd := exec.Command(execPath, fmt.Sprintf("--wait-pid=%d", os.Getpid()))

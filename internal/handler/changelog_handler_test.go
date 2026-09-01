@@ -24,7 +24,7 @@ func TestChangelogHandler(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(tempDir, "v2.3.4.md"), []byte("# v2.3.4\nLatest update"), 0644)
 	_ = os.WriteFile(filepath.Join(tempDir, "invalid_file.txt"), []byte("ignored"), 0644)
 
-	h := NewChangelogHandler(tempDir)
+	h := NewChangelogHandler(tempDir, nil)
 	e := echo.New()
 
 	// 1. Test GetChangelogList

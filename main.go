@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"log"
@@ -14,6 +15,9 @@ import (
 	"pdnode.com/play/liarsbar-web/internal/handler"
 	"pdnode.com/play/liarsbar-web/internal/room"
 )
+
+//go:embed changelogs/*.md
+var embeddedChangelogs embed.FS
 
 func main() {
 	waitPID := flag.Int("wait-pid", 0, "等待旧服务进程退出并释放端口后再绑定")
@@ -42,7 +46,7 @@ func main() {
 	hub := room.NewHub()
 	wsHandler := handler.NewWSHandler(hub)
 	adminHandler := handler.NewAdminHandler(hub, port)
-	changelogHandler := handler.NewChangelogHandler("changelogs")
+	changelogHandler := handler.NewChangelogHandler("changelogs", embeddedChangelogs)
 
 	e := echo.New()
 	e.HideBanner = true
