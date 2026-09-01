@@ -4,6 +4,7 @@
     <HeaderBar
       :room-code="state.room_code || myRoomCode"
       :status="state.status"
+      :game-mode="state.game_mode"
       :deadline="state.deadline"
       @open-rules="$emit('open-rules')"
       @open-changelog="$emit('open-changelog')"

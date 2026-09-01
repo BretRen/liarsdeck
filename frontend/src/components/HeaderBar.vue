@@ -12,7 +12,7 @@
 
       <!-- Room Mode Badge -->
       <span
-        v-if="store.state.value.game_mode === 'items'"
+        v-if="gameMode === 'items'"
         class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px] font-bold tracking-wide"
       >
         {{ t('mode_items_title') }}
@@ -58,12 +58,7 @@
           <span class="text-[10px] font-mono font-bold">{{ audio.isMuted.value ? '0%' : `${Math.round(audio.masterVolume.value * 100)}%` }}</span>
         </button>
         <div tabindex="0" class="dropdown-content z-[100] menu p-3 shadow-2xl bg-slate-900/95 border border-slate-700/80 rounded-xl w-48 backdrop-blur-xl mt-2 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-[11px] font-bold text-slate-300">
-            <span>{{ t('volume_label') }}</span>
-            <button class="btn btn-xs btn-ghost text-slate-400 hover:text-white p-0 h-4 min-h-0" @click="audio.toggleMute">
-              {{ audio.isMuted.value ? 'Unmute' : 'Mute' }}
-            </button>
-          </div>
+          <label class="text-xs font-bold text-slate-300">{{ t('volume_label') }}</label>
           <input
             type="range"
             min="0"
@@ -85,8 +80,8 @@
       <button class="btn btn-xs btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-mono font-bold" @click="toggleLang">
         {{ lang.toUpperCase() }}
       </button>
-      <button class="btn btn-xs btn-error bg-rose-600/80 hover:bg-rose-600 border-none text-white font-semibold" @click="$emit('leave')" title="离开房间">
-        退出
+      <button class="btn btn-xs btn-error bg-rose-600/80 hover:bg-rose-600 border-none text-white font-semibold" @click="$emit('leave')" :title="t('leave_btn')">
+        {{ t('leave_btn') }}
       </button>
     </div>
   </header>
@@ -101,6 +96,7 @@ import { useGameStore } from '../composables/useGameStore';
 const props = defineProps({
   roomCode: { type: String, default: '' },
   status: { type: String, default: 'waiting' },
+  gameMode: { type: String, default: 'classic' },
   deadline: { type: Number, default: 0 },
 });
 

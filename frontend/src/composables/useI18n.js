@@ -15,6 +15,7 @@ const dict = {
     join_btn: '加入对战',
     spectate_btn: '进入观战',
     back: '返回',
+    leave_btn: '退出',
     rules_btn: '规则说明',
 
     // Status
@@ -254,6 +255,7 @@ const dict = {
     join_btn: 'Join Table',
     spectate_btn: 'Spectate',
     back: 'Back',
+    leave_btn: 'Leave',
     rules_btn: 'House Rules',
 
     // Status
