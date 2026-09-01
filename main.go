@@ -118,19 +118,23 @@ func main() {
 		})
 	})
 
-	// 静态文件与 SPA 页面托管：内置嵌入与本地开发双轨支持
+	// 静态文件与 SPA 页面托管：默认优先使用二进制内置嵌入资源，防止服务器磁盘旧文件污染
 	publicFS, err := fs.Sub(embeddedPublic, "public")
 	if err != nil {
 		log.Fatalf("无法解析内置前端资源: %v", err)
 	}
 
-	hasLocalPublic := false
-	if fi, err := os.Stat("public/index.html"); err == nil && !fi.IsDir() {
-		hasLocalPublic = true
+	// 仅当配置 USE_LOCAL_PUBLIC=true 或 DEV=true 且本地存在 public/index.html 时才使用本地磁盘文件
+	useLocalPublic := false
+	if os.Getenv("USE_LOCAL_PUBLIC") == "true" || os.Getenv("DEV") == "true" {
+		if fi, err := os.Stat("public/index.html"); err == nil && !fi.IsDir() {
+			useLocalPublic = true
+			log.Printf("📂 [Dev Mode] 正在使用本地磁盘 public/ 资源目录托管前端")
+		}
 	}
 
 	var assetFS http.FileSystem
-	if hasLocalPublic {
+	if useLocalPublic {
 		assetFS = http.Dir("public")
 	} else {
 		assetFS = http.FS(publicFS)
@@ -138,7 +142,12 @@ func main() {
 	fileServer := http.FileServer(assetFS)
 
 	serveIndex := func(c echo.Context) error {
-		if hasLocalPublic {
+		// 强制禁止浏览器缓存 index.html 入口文件，确保每次版本更新后客户端立即获取最新构建哈希
+		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
+		c.Response().Header().Set("Pragma", "no-cache")
+		c.Response().Header().Set("Expires", "0")
+
+		if useLocalPublic {
 			return c.File("public/index.html")
 		}
 		indexHTML, err := fs.ReadFile(publicFS, "index.html")
@@ -148,9 +157,14 @@ func main() {
 		return c.HTMLBlob(http.StatusOK, indexHTML)
 	}
 
-	e.GET("/assets/*", echo.WrapHandler(fileServer))
+	e.GET("/assets/*", func(c echo.Context) error {
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		fileServer.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
+
 	e.GET("/favicon.ico", func(c echo.Context) error {
-		if hasLocalPublic {
+		if useLocalPublic {
 			if _, err := os.Stat("public/favicon.ico"); err == nil {
 				return c.File("public/favicon.ico")
 			}
@@ -166,7 +180,7 @@ func main() {
 	e.RouteNotFound("/*", func(c echo.Context) error {
 		p := strings.TrimPrefix(c.Request().URL.Path, "/")
 		if p != "" {
-			if hasLocalPublic {
+			if useLocalPublic {
 				if _, err := os.Stat(filepath.Join("public", p)); err == nil {
 					return c.File(filepath.Join("public", p))
 				}
