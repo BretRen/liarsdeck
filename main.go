@@ -4,10 +4,13 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -15,6 +18,9 @@ import (
 	"pdnode.com/play/liarsbar-web/internal/handler"
 	"pdnode.com/play/liarsbar-web/internal/room"
 )
+
+//go:embed all:public
+var embeddedPublic embed.FS
 
 //go:embed changelogs/*.md
 var embeddedChangelogs embed.FS
@@ -112,12 +118,67 @@ func main() {
 		})
 	})
 
-	// 静态文件与 SPA 页面托管
-	e.File("/callback", "public/index.html")
-	e.Static("/", "public")
-	e.File("/", "public/index.html")
+	// 静态文件与 SPA 页面托管：内置嵌入与本地开发双轨支持
+	publicFS, err := fs.Sub(embeddedPublic, "public")
+	if err != nil {
+		log.Fatalf("无法解析内置前端资源: %v", err)
+	}
+
+	hasLocalPublic := false
+	if fi, err := os.Stat("public/index.html"); err == nil && !fi.IsDir() {
+		hasLocalPublic = true
+	}
+
+	var assetFS http.FileSystem
+	if hasLocalPublic {
+		assetFS = http.Dir("public")
+	} else {
+		assetFS = http.FS(publicFS)
+	}
+	fileServer := http.FileServer(assetFS)
+
+	serveIndex := func(c echo.Context) error {
+		if hasLocalPublic {
+			return c.File("public/index.html")
+		}
+		indexHTML, err := fs.ReadFile(publicFS, "index.html")
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Internal Error: index.html not found in binary")
+		}
+		return c.HTMLBlob(http.StatusOK, indexHTML)
+	}
+
+	e.GET("/assets/*", echo.WrapHandler(fileServer))
+	e.GET("/favicon.ico", func(c echo.Context) error {
+		if hasLocalPublic {
+			if _, err := os.Stat("public/favicon.ico"); err == nil {
+				return c.File("public/favicon.ico")
+			}
+		}
+		if data, err := fs.ReadFile(publicFS, "favicon.ico"); err == nil {
+			return c.Blob(http.StatusOK, "image/x-icon", data)
+		}
+		return c.NoContent(http.StatusNotFound)
+	})
+
+	e.GET("/", serveIndex)
+	e.GET("/callback", serveIndex)
 	e.RouteNotFound("/*", func(c echo.Context) error {
-		return c.File("public/index.html")
+		p := strings.TrimPrefix(c.Request().URL.Path, "/")
+		if p != "" {
+			if hasLocalPublic {
+				if _, err := os.Stat(filepath.Join("public", p)); err == nil {
+					return c.File(filepath.Join("public", p))
+				}
+			} else {
+				if f, err := publicFS.Open(p); err == nil {
+					_ = f.Close()
+					fileServer.ServeHTTP(c.Response(), c.Request())
+					return nil
+				}
+			}
+		}
+		return serveIndex(c)
 	})
 
 	log.Printf("🃏 Liar's Deck (%s) 服务器已启动: http://localhost:%s", handler.GetVersion(), port)
