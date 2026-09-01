@@ -1,12 +1,35 @@
 <template>
-  <div class="app-root min-h-screen" :class="{ 'animate-screen-shake': isScreenShaking }">
-    <!-- Fullscreen Fatal Gunshot Flash & Blood Vignette -->
-    <transition name="toast-fade">
-      <div v-if="isFatalShotActive" class="fatal-blood-overlay">
-        <div class="fatal-flash absolute inset-0"></div>
-        <div class="fatal-vignette absolute inset-0"></div>
-      </div>
-    </transition>
+  <div class="app-root p-3 md:p-5 min-h-screen">
+    <!-- Fullscreen Fatal Gunshot Flash & Blood Vignette (Teleported to Body for True 100vw/100vh) -->
+    <Teleport to="body">
+      <transition name="toast-fade">
+        <div v-if="isFatalShotActive" class="fatal-blood-overlay fixed inset-0 w-screen h-screen pointer-events-none z-[999999]">
+          <!-- 1. Muzzle Flash -->
+          <div class="fatal-flash fixed inset-0 w-screen h-screen"></div>
+
+          <!-- 2. Fullscreen Deep Radial Blood Vignette -->
+          <div class="fatal-vignette fixed inset-0 w-screen h-screen"></div>
+
+          <!-- 3. Screen Edge Blood Splatter Accents -->
+          <svg class="fixed inset-0 w-screen h-screen pointer-events-none opacity-85" xmlns="http://www.w3.org/2000/svg">
+            <!-- Top left splatter -->
+            <circle cx="3%" cy="4%" r="45" fill="rgba(159, 18, 57, 0.85)" filter="blur(8px)" />
+            <circle cx="6%" cy="8%" r="22" fill="rgba(190, 18, 60, 0.75)" filter="blur(4px)" />
+            <circle cx="2%" cy="14%" r="28" fill="rgba(136, 19, 55, 0.8)" filter="blur(6px)" />
+            <!-- Top right splatter -->
+            <circle cx="96%" cy="3%" r="50" fill="rgba(159, 18, 57, 0.85)" filter="blur(8px)" />
+            <circle cx="93%" cy="7%" r="24" fill="rgba(190, 18, 60, 0.75)" filter="blur(4px)" />
+            <circle cx="97%" cy="13%" r="30" fill="rgba(136, 19, 55, 0.8)" filter="blur(6px)" />
+            <!-- Bottom left splatter -->
+            <circle cx="3%" cy="95%" r="55" fill="rgba(136, 19, 55, 0.9)" filter="blur(10px)" />
+            <circle cx="8%" cy="91%" r="28" fill="rgba(190, 18, 60, 0.8)" filter="blur(5px)" />
+            <!-- Bottom right splatter -->
+            <circle cx="97%" cy="96%" r="60" fill="rgba(136, 19, 55, 0.9)" filter="blur(10px)" />
+            <circle cx="92%" cy="92%" r="32" fill="rgba(190, 18, 60, 0.8)" filter="blur(5px)" />
+          </svg>
+        </div>
+      </transition>
+    </Teleport>
 
     <!-- Global Broadcast Banner -->
     <transition name="broadcast-slide">
@@ -54,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from './composables/useI18n';
 import { useAuth } from './composables/useAuth';
 import { useGameStore } from './composables/useGameStore';
@@ -73,6 +96,14 @@ const showRules = ref(false);
 const showAdmin = ref(false);
 const showChangelog = ref(false);
 const { connected, toast, globalBroadcast, dismissBroadcast, isScreenShaking, isFatalShotActive } = useGameStore();
+
+watch(isScreenShaking, (val) => {
+  if (val) {
+    document.body.classList.add('animate-screen-shake');
+  } else {
+    document.body.classList.remove('animate-screen-shake');
+  }
+});
 
 function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {

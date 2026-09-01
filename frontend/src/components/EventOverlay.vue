@@ -1,14 +1,7 @@
 <template>
   <div v-if="currentStep" class="fixed inset-0 z-[1500] flex items-center justify-center p-5 backdrop-blur-md animate-in fade-in duration-200" :class="overlayBg">
-    <!-- Muzzle Flash & Blood Vignette on fatal shot -->
-    <div
-      v-if="currentStep === 'shot' && stepData.fatal"
-      class="fixed inset-0 pointer-events-none z-[1501] bg-[radial-gradient(ellipse_at_center,_transparent_30%,_rgba(225,29,72,0.65)_100%)] animate-pulse"
-    ></div>
-
     <div
       class="card w-full max-w-md p-7 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl shadow-black/80 flex flex-col items-center text-center gap-4 transition-all"
-      :class="{ 'animate-screen-shake': currentStep === 'shot' && stepData.fatal }"
     >
       <!-- 1. Liar Call Step -->
       <template v-if="currentStep === 'liar_call'">
@@ -53,14 +46,34 @@
         </div>
       </template>
 
-      <!-- 3. Shot Step -->
+      <!-- 3. Shot Step (Russian Roulette Revolver) -->
       <template v-if="currentStep === 'shot'">
         <div class="badge badge-sm font-extrabold tracking-widest uppercase py-1 px-3" :class="stepData.fatal ? 'badge-error text-white shadow-lg shadow-rose-600/40' : 'badge-success text-white shadow-lg shadow-emerald-600/40'">
-          {{ stepData.fatal ? 'FATAL ROUND' : 'DRY FIRE' }}
+          {{ stepData.fatal ? '💥 FATAL ROUND' : '🛡️ DRY FIRE' }}
         </div>
+
+        <!-- 6-Chamber Revolver Graphic -->
+        <div class="relative w-16 h-16 rounded-full border-2 border-slate-700 bg-slate-950 flex items-center justify-center shadow-inner my-1">
+          <div class="absolute w-5 h-5 rounded-full bg-slate-800 border border-slate-600"></div>
+          <!-- 6 chambers arranged in a circle -->
+          <div
+            v-for="idx in 6"
+            :key="idx"
+            class="absolute w-3.5 h-3.5 rounded-full border transition-all"
+            :class="[
+              idx === 1 && stepData.fatal ? 'bg-rose-500 border-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.9)] animate-ping' : '',
+              idx === 1 && !stepData.fatal ? 'bg-emerald-500 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : '',
+              idx > 1 ? 'bg-slate-900 border-slate-700' : ''
+            ]"
+            :style="{
+              transform: `rotate(${(idx - 1) * 60}deg) translate(0, -22px)`
+            }"
+          ></div>
+        </div>
+
         <h2
           class="text-2xl font-black font-serif tracking-wide"
-          :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)] animate-pulse' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]'"
+          :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]'"
         >
           {{ stepData.fatal ? t('event_bang_title') : t('event_click_title') }}
         </h2>
@@ -95,7 +108,7 @@ function isCardHonest(card) {
 const overlayBg = computed(() => {
   if (props.currentStep === 'liar_call') return 'bg-rose-950/70';
   if (props.currentStep === 'reveal') return 'bg-slate-950/80';
-  if (props.currentStep === 'shot') return props.stepData.fatal ? 'bg-rose-950/85' : 'bg-slate-950/85';
+  if (props.currentStep === 'shot') return props.stepData.fatal ? 'bg-rose-950/60' : 'bg-slate-950/80';
   return 'bg-slate-950/75';
 });
 </script>
