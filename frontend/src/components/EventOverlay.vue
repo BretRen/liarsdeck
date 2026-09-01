@@ -46,40 +46,82 @@
         </div>
       </template>
 
-      <!-- 3. Shot Step (Russian Roulette Revolver) -->
+      <!-- 3. Shot Step (Russian Roulette Revolver / Shotgun Double Fire) -->
       <template v-if="currentStep === 'shot'">
-        <div class="badge badge-sm font-extrabold tracking-widest uppercase py-1 px-3" :class="stepData.fatal ? 'badge-error text-white shadow-lg shadow-rose-600/40' : 'badge-success text-white shadow-lg shadow-emerald-600/40'">
-          {{ stepData.fatal ? '💥 FATAL ROUND' : '🛡️ DRY FIRE' }}
+        <!-- Badge -->
+        <div class="flex items-center gap-2 flex-wrap justify-center">
+          <span
+            v-if="stepData.double_shot"
+            class="badge badge-warning badge-sm font-extrabold tracking-wider uppercase py-1 px-3 shadow-lg shadow-amber-600/40 animate-bounce"
+          >
+            {{ t('event_shot_badge_double') }}
+          </span>
+          <span
+            v-if="stepData.armor_blocked"
+            class="badge badge-info badge-sm font-extrabold tracking-wider uppercase py-1 px-3 shadow-lg shadow-sky-600/40"
+          >
+            {{ t('event_shot_badge_armor') }}
+          </span>
+          <span
+            v-else
+            class="badge badge-sm font-extrabold tracking-widest uppercase py-1 px-3"
+            :class="stepData.fatal ? 'badge-error text-white shadow-lg shadow-rose-600/40' : 'badge-success text-white shadow-lg shadow-emerald-600/40'"
+          >
+            {{ stepData.fatal ? t('event_shot_badge_fatal') : t('event_shot_badge_blank') }}
+          </span>
         </div>
 
-        <!-- 6-Chamber Revolver Graphic -->
-        <div class="relative w-16 h-16 rounded-full border-2 border-slate-700 bg-slate-950 flex items-center justify-center shadow-inner my-1">
-          <div class="absolute w-5 h-5 rounded-full bg-slate-800 border border-slate-600"></div>
+        <!-- 6-Chamber Revolver Graphic with Double Fire / Armor Animation -->
+        <div
+          class="relative w-20 h-20 rounded-full border-2 border-slate-700 bg-slate-950 flex items-center justify-center shadow-inner my-2"
+          :class="{ 'animate-double-recoil': stepData.double_shot, 'animate-armor-shield': stepData.armor_blocked }"
+        >
+          <div class="absolute w-6 h-6 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
+            <span v-if="stepData.armor_blocked" class="text-xs">🛡️</span>
+            <span v-else-if="stepData.double_shot" class="text-xs text-amber-400 font-bold">⚡2</span>
+          </div>
+
           <!-- 6 chambers arranged in a circle -->
           <div
             v-for="idx in 6"
             :key="idx"
-            class="absolute w-3.5 h-3.5 rounded-full border transition-all"
-            :class="[
-              idx === 1 && stepData.fatal ? 'bg-rose-500 border-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.9)] animate-ping' : '',
-              idx === 1 && !stepData.fatal ? 'bg-emerald-500 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]' : '',
-              idx > 1 ? 'bg-slate-900 border-slate-700' : ''
-            ]"
+            class="absolute w-4 h-4 rounded-full border transition-all"
+            :class="getChamberClass(idx)"
             :style="{
-              transform: `rotate(${(idx - 1) * 60}deg) translate(0, -22px)`
+              transform: `rotate(${(idx - 1) * 60}deg) translate(0, -27px)`
             }"
           ></div>
         </div>
 
         <h2
           class="text-2xl font-black font-serif tracking-wide"
-          :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]'"
+          :class="stepData.fatal ? 'text-rose-400 drop-shadow-[0_0_20px_rgba(244,63,94,0.8)]' : (stepData.armor_blocked ? 'text-sky-300 drop-shadow-[0_0_15px_rgba(56,189,248,0.6)]' : 'text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]')"
         >
-          {{ stepData.fatal ? t('event_bang_title') : t('event_click_title') }}
+          <template v-if="stepData.fatal">
+            {{ t('event_bang_title') }}
+          </template>
+          <template v-else-if="stepData.armor_blocked">
+            {{ t('event_shot_badge_armor') }}
+          </template>
+          <template v-else>
+            {{ t('event_click_title') }}
+          </template>
         </h2>
-        <p class="text-sm text-slate-300 leading-relaxed">
-          <span class="font-bold text-slate-100">{{ stepData.target }}</span>
-          {{ stepData.fatal ? t('event_bang_sub') : t('event_click_sub') }}
+
+        <p class="text-sm text-slate-300 leading-relaxed max-w-xs">
+          <span class="font-bold text-slate-100 mr-1">{{ stepData.target }}</span>
+          <template v-if="stepData.fatal">
+            {{ t('event_bang_sub') }}
+          </template>
+          <template v-else-if="stepData.armor_blocked">
+            {{ t('event_shot_armor_sub') }}
+          </template>
+          <template v-else-if="stepData.double_shot">
+            {{ t('event_shot_double_sub') }}
+          </template>
+          <template v-else>
+            {{ t('event_click_sub') }}
+          </template>
         </p>
       </template>
     </div>
@@ -105,6 +147,34 @@ function isCardHonest(card) {
   return card === tableCard || card === '2';
 }
 
+function getChamberClass(idx) {
+  const isFatal = props.stepData.fatal;
+  const isDouble = props.stepData.double_shot;
+  const isArmor = props.stepData.armor_blocked;
+
+  if (idx === 1) {
+    if (isArmor) {
+      return 'bg-sky-500 border-sky-300 shadow-[0_0_14px_rgba(56,189,248,0.95)] animate-pulse';
+    }
+    if (isFatal) {
+      return 'bg-rose-500 border-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.95)] animate-ping';
+    }
+    if (isDouble) {
+      return 'bg-amber-500 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.85)] animate-pulse';
+    }
+    return 'bg-emerald-500 border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.7)]';
+  }
+
+  if (idx === 2 && isDouble) {
+    if (isFatal) {
+      return 'bg-rose-500 border-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.95)] animate-ping';
+    }
+    return 'bg-amber-500 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.85)] animate-pulse';
+  }
+
+  return 'bg-slate-900 border-slate-700';
+}
+
 const overlayBg = computed(() => {
   if (props.currentStep === 'liar_call') return 'bg-rose-950/70';
   if (props.currentStep === 'reveal') return 'bg-slate-950/80';
@@ -112,3 +182,25 @@ const overlayBg = computed(() => {
   return 'bg-slate-950/75';
 });
 </script>
+
+<style scoped>
+@keyframes doubleRecoil {
+  0% { transform: scale(1) translateY(0); }
+  20% { transform: scale(1.18) translateY(-6px); }
+  45% { transform: scale(0.96) translateY(2px); }
+  65% { transform: scale(1.24) translateY(-8px); }
+  100% { transform: scale(1) translateY(0); }
+}
+.animate-double-recoil {
+  animation: doubleRecoil 0.75s ease-out both;
+}
+
+@keyframes armorShield {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0)); }
+  40% { transform: scale(1.25); filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.9)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4)); }
+}
+.animate-armor-shield {
+  animation: armorShield 0.8s ease-out both;
+}
+</style>

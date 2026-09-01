@@ -88,7 +88,7 @@ func TestCallLiarHonest(t *testing.T) {
 	var shotFatal bool
 
 	// p2 calls p1 a liar, but p1 played King and Two (Honest). So p2 (caller) gets shot.
-	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool) {
+	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool, doubleShot bool, armorBlocked bool) {
 		shotTarget = target
 		shotFatal = fatal
 	})
@@ -113,7 +113,7 @@ func TestCallLiarBluff(t *testing.T) {
 	var shotFatal bool
 
 	// p2 calls p1 a liar, p1 played Queen (Liar). p1 gets shot.
-	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool) {
+	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool, doubleShot bool, armorBlocked bool) {
 		shotTarget = target
 		shotFatal = fatal
 	})
@@ -143,7 +143,7 @@ func TestCallLiarEmptyHandHonestVictory(t *testing.T) {
 	var shotTarget string
 	var shotFatal bool
 
-	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool) {
+	g.CallLiar(1, 0, nil, nil, func(target string, fatal bool, doubleShot bool, armorBlocked bool) {
 		shotTarget = target
 		shotFatal = fatal
 	})
@@ -335,6 +335,9 @@ func TestShootPlayerArmorAbsorption(t *testing.T) {
 	}
 	if p.HasArmor {
 		t.Fatalf("armor should be consumed")
+	}
+	if p.Bullets != 6 || len(p.Revolver) != 6 {
+		t.Fatalf("expected player revolver to be reloaded to 6 bullets after armor absorbed, got bullets=%d, len=%d", p.Bullets, len(p.Revolver))
 	}
 
 	// 再次面临必死子弹（无护甲），应当被淘汰

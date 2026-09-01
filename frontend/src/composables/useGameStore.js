@@ -167,7 +167,24 @@ export function useGameStore() {
       audio.playLiarAlert();
       audio.playHeartbeat();
     } else if (ev.type === 'shot') {
-      if (ev.data.fatal) {
+      if (ev.data.double_shot) {
+        audio.playGunClick();
+        setTimeout(() => {
+          if (ev.data.fatal) {
+            audio.playGunshot();
+            isFatalShotActive.value = true;
+            isScreenShaking.value = true;
+            setTimeout(() => {
+              isScreenShaking.value = false;
+            }, 750);
+            setTimeout(() => {
+              isFatalShotActive.value = false;
+            }, 2400);
+          } else {
+            audio.playGunClick();
+          }
+        }, 400);
+      } else if (ev.data.fatal) {
         audio.playGunshot();
         isFatalShotActive.value = true;
         isScreenShaking.value = true;
@@ -184,7 +201,8 @@ export function useGameStore() {
       audio.playCardFlip();
     }
 
-    const dur = { liar_call: 1900, reveal: 2400, shot: 2200 };
+    const shotDur = ev.data?.double_shot ? 2800 : (ev.data?.armor_blocked ? 2500 : 2200);
+    const dur = { liar_call: 1900, reveal: 2400, shot: shotDur };
     setTimeout(() => {
       currentStep.value = '';
       processingEvent.value = false;

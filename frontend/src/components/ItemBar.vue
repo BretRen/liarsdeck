@@ -44,7 +44,7 @@
               :disabled="isItemDisabled(items[slotIdx])"
               @click="onUse(items[slotIdx])"
             >
-              使用
+              {{ t('item_use_btn') }}
             </button>
           </div>
         </template>
@@ -52,7 +52,7 @@
         <!-- 空槽位 -->
         <template v-else>
           <div class="flex items-center justify-center w-full text-slate-600 text-xs font-mono">
-            <span class="text-[11px] font-semibold tracking-wide">空</span>
+            <span class="text-[11px] font-semibold tracking-wide">{{ t('item_slot_empty') }}</span>
           </div>
         </template>
       </div>

@@ -209,6 +209,9 @@ const dict = {
     item_fate_shift_name: '骰子',
     item_fate_shift_desc: '重置桌面上的目标牌',
     item_used_toast: '已使用【{name}】',
+    item_used_by: '{user} 使用了道具',
+    item_use_btn: '使用',
+    item_slot_empty: '空',
     item_disabled_not_turn: '只能在你的回合使用',
     item_disabled_empty_table: '桌面上暂无出牌',
     eagle_eye_modal_title: '放大镜',
@@ -218,6 +221,14 @@ const dict = {
     armor_equipped_tag: '防弹衣',
     items_inventory_label: '道具',
     no_items_tip: '暂无道具',
+
+    // Events shot details
+    event_shot_badge_fatal: '💥 致命实弹',
+    event_shot_badge_blank: '🛡️ 空包弹',
+    event_shot_badge_double: '⚡ 猎枪连开两枪',
+    event_shot_badge_armor: '🛡️ 防弹衣抵消实弹',
+    event_shot_armor_sub: '防弹衣吸收了致命实弹！已重新装填新轮盘',
+    event_shot_double_sub: '猎枪生效！承受了连扣两次扳机判定',
 
     // Logs
     battle_log_title: '对局动态',
@@ -435,6 +446,9 @@ const dict = {
     item_fate_shift_name: 'Dice',
     item_fate_shift_desc: 'Reroll the table card',
     item_used_toast: 'Used [{name}]',
+    item_used_by: '{user} used an item',
+    item_use_btn: 'Use',
+    item_slot_empty: 'Empty',
     item_disabled_not_turn: 'Can only use on your turn',
     item_disabled_empty_table: 'No cards on table yet',
     eagle_eye_modal_title: 'Magnifier',
@@ -444,6 +458,14 @@ const dict = {
     armor_equipped_tag: 'Vest',
     items_inventory_label: 'Items',
     no_items_tip: 'No items',
+
+    // Events shot details
+    event_shot_badge_fatal: '💥 FATAL ROUND',
+    event_shot_badge_blank: '🛡️ DRY FIRE',
+    event_shot_badge_double: '⚡ SHOTGUN DOUBLE SHOT',
+    event_shot_badge_armor: '🛡️ VEST DEFLECTED FATAL SHOT',
+    event_shot_armor_sub: 'Vest absorbed the fatal bullet! Reloaded new cylinder.',
+    event_shot_double_sub: 'Shotgun active! Two trigger pulls were executed.',
 
     // Logs
     battle_log_title: 'Action Log',
@@ -455,8 +477,8 @@ const dict = {
   }
 };
 
-// 全局单例语言响应式状态，确保全站组件双向同步切换
-const currentLang = ref(localStorage.getItem('liarsdeck_lang') || 'zh');
+// 全局单例语言响应式状态，默认英文
+const currentLang = ref(localStorage.getItem('liarsdeck_lang') || 'en');
 
 watchEffect(() => {
   localStorage.setItem('liarsdeck_lang', currentLang.value);
@@ -464,7 +486,7 @@ watchEffect(() => {
 
 export function useI18n() {
   function t(key, params = {}) {
-    let str = (dict[currentLang.value] || dict.zh)[key] || key;
+    let str = (dict[currentLang.value] || dict.en || dict.zh)[key] || (dict.en || dict.zh)[key] || key;
     for (const [k, v] of Object.entries(params)) {
       str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
     }

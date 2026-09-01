@@ -448,7 +448,7 @@ func (g *Game) CallLiar(
 	callerIdx, accusedIdx int,
 	onLiarCall func(caller, accused string),
 	onReveal func(caller, accused string, cards []model.Card),
-	onShot func(target string, fatal bool),
+	onShot func(target string, fatal bool, doubleShot bool, armorBlocked bool),
 ) {
 	if callerIdx < 0 || callerIdx >= len(g.State.Players) ||
 		accusedIdx < 0 || accusedIdx >= len(g.State.Players) ||
@@ -515,7 +515,7 @@ func (g *Game) CallLiar(
 	}
 }
 
-func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)) bool {
+func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool, doubleShot bool, armorBlocked bool)) bool {
 	if playerIdx < 0 || playerIdx >= len(g.State.Players) {
 		return false
 	}
@@ -533,15 +533,21 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 	}
 
 	isFatal := false
+	isDoubleShot := g.State.DoubleDamage
+	armorBlocked := false
 
-	if g.State.DoubleDamage {
+	if isDoubleShot {
 		g.Log(fmt.Sprintf("猎枪生效：对 %s 连扣两次扳机 / Shotgun active: %s takes double shots", p.Nickname, p.Nickname))
 
 		hit1 := pullTrigger()
 		if hit1 {
 			if p.HasArmor {
 				p.HasArmor = false
+				armorBlocked = true
 				g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了第一发致命子弹 / Vest blocked 1st fatal shot for %s", p.Nickname, p.Nickname))
+				// 重新装填轮盘：实弹已被消耗，装入新一轮随机轮盘
+				p.Revolver = NewRevolver()
+				p.Bullets = 6
 				hit2 := pullTrigger()
 				if hit2 {
 					p.IsAlive = false
@@ -561,7 +567,10 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 			if hit2 {
 				if p.HasArmor {
 					p.HasArmor = false
+					armorBlocked = true
 					g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了第二发致命子弹 / Vest blocked 2nd fatal shot for %s", p.Nickname, p.Nickname))
+					p.Revolver = NewRevolver()
+					p.Bullets = 6
 				} else {
 					p.IsAlive = false
 					isFatal = true
@@ -577,7 +586,12 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 		if hit {
 			if p.HasArmor {
 				p.HasArmor = false
+				armorBlocked = true
 				g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了致命子弹 / Vest blocked the fatal bullet for %s", p.Nickname, p.Nickname))
+				// 实弹已打出，重新装填 6 发轮盘（含 1 发致命实弹）
+				p.Revolver = NewRevolver()
+				p.Bullets = 6
+				g.Log(fmt.Sprintf("致命子弹已消耗，已为 %s 重新装填 6 发轮盘！ / Reloaded 6-chamber cylinder for %s!", p.Nickname, p.Nickname))
 			} else {
 				p.IsAlive = false
 				isFatal = true
@@ -589,7 +603,7 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 	}
 
 	if onShot != nil {
-		onShot(p.Nickname, isFatal)
+		onShot(p.Nickname, isFatal, isDoubleShot, armorBlocked)
 	}
 
 	// 道具模式：若空枪幸存，奖励 1 个随机道具
@@ -605,7 +619,7 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 	return isFatal
 }
 
-func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool)) {
+func (g *Game) FireGun(playerIdx int, onShot func(target string, fatal bool, doubleShot bool, armorBlocked bool)) {
 	g.ShootPlayer(playerIdx, onShot)
 
 	g.State.CurrentTurn = playerIdx

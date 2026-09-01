@@ -104,8 +104,10 @@
         <div class="item-used-icon w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs shrink-0">
           {{ getItemIcon(itemUsedEvent?.item) }}
         </div>
-        <div class="flex flex-col">
-          <span class="text-[11px] font-bold text-amber-300 leading-tight">{{ itemUsedEvent?.nickname }} 使用了道具</span>
+        <div class="flex flex-col text-left">
+          <span class="text-[11px] font-bold text-amber-300 leading-tight">
+            {{ t('item_used_by', { user: itemUsedEvent?.nickname || 'Player' }) }}
+          </span>
           <span class="text-xs font-bold text-slate-100">{{ getItemName(itemUsedEvent?.item) }}</span>
         </div>
       </div>
@@ -199,8 +201,9 @@ function getItemIcon(item) {
 }
 
 function getItemName(item) {
-  const map = { eagle_eye: '放大镜', sawed_off: '猎枪', hard_liquor: '啤酒', kevlar_armor: '防弹衣', fate_shift: '骰子' };
-  return map[item] || item;
+  if (!item) return '';
+  const key = `item_${item}_name`;
+  return t(key);
 }
 
 function onLeave() {

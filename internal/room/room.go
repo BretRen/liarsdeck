@@ -322,8 +322,13 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 					func(caller, accused string, cards []model.Card) {
 						r.BroadcastEvent("reveal", model.RevealEvent{Caller: caller, Accused: accused, Cards: cards})
 					},
-					func(target string, fatal bool) {
-						r.BroadcastEvent("shot", model.ShotEvent{Target: target, Fatal: fatal})
+					func(target string, fatal bool, doubleShot bool, armorBlocked bool) {
+						r.BroadcastEvent("shot", model.ShotEvent{
+							Target:       target,
+							Fatal:        fatal,
+							DoubleShot:   doubleShot,
+							ArmorBlocked: armorBlocked,
+						})
 					},
 				)
 			}
@@ -461,8 +466,13 @@ func (r *Room) Watchdog() {
 						func(caller, accused string, cards []model.Card) {
 							r.BroadcastEvent("reveal", model.RevealEvent{Caller: caller, Accused: accused, Cards: cards})
 						},
-						func(target string, fatal bool) {
-							r.BroadcastEvent("shot", model.ShotEvent{Target: target, Fatal: fatal})
+						func(target string, fatal bool, doubleShot bool, armorBlocked bool) {
+							r.BroadcastEvent("shot", model.ShotEvent{
+								Target:       target,
+								Fatal:        fatal,
+								DoubleShot:   doubleShot,
+								ArmorBlocked: armorBlocked,
+							})
 						},
 					)
 				}
