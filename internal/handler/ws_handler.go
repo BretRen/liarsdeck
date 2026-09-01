@@ -88,15 +88,16 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 
 		r.Game.Lock()
 		r.Game.State.Players = append(r.Game.State.Players, &model.Player{
-			ID:          client.ID,
-			Nickname:    nickname,
-			Hand:        []model.Card{},
-			Revolver:    game.NewRevolver(),
-			Bullets:     6,
-			IsAlive:     true,
-			IsHost:      true,
-			IsSpectator: false,
-			ClientRef:   client,
+			ID:                       client.ID,
+			Nickname:                 nickname,
+			Hand:                     []model.Card{},
+			Revolver:                 game.NewRevolver(),
+			Bullets:                  6,
+			IsAlive:                  true,
+			IsHost:                   true,
+			IsSpectator:              false,
+			DisconnectGraceRemaining: 30,
+			ClientRef:                client,
 		})
 		r.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s / 🏠 %s created room %s", nickname, r.Code, nickname, r.Code))
 		r.Game.Unlock()
@@ -126,7 +127,7 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 				client := room.NewClient(p.ID, p.Nickname, r, conn)
 				r.AddClient(client)
 				p.ClientRef = client
-				if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+				if r.Game.State.Status == model.StatusPaused && (r.Game.State.PausedPlayerID == p.ID || (r.Game.State.PausedPlayerID == "" && r.Game.State.PausedPlayer == p.Nickname)) {
 					r.Game.ResumeGame(p)
 				} else {
 					r.Game.Log(fmt.Sprintf("🔗 %s 重新连接 / 🔗 %s reconnected", p.Nickname, p.Nickname))
@@ -172,15 +173,16 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 
 	if !isSpectator && r.Game.State.Status == model.StatusWaiting && playerCount < 4 {
 		r.Game.State.Players = append(r.Game.State.Players, &model.Player{
-			ID:          client.ID,
-			Nickname:    nickname,
-			Hand:        []model.Card{},
-			Revolver:    game.NewRevolver(),
-			Bullets:     6,
-			IsAlive:     true,
-			IsHost:      false,
-			IsSpectator: false,
-			ClientRef:   client,
+			ID:                       client.ID,
+			Nickname:                 nickname,
+			Hand:                     []model.Card{},
+			Revolver:                 game.NewRevolver(),
+			Bullets:                  6,
+			IsAlive:                  true,
+			IsHost:                   false,
+			IsSpectator:              false,
+			DisconnectGraceRemaining: 30,
+			ClientRef:                client,
 		})
 		r.Game.Log(fmt.Sprintf("👋 %s 加入了房间 / 👋 %s joined room", nickname, nickname))
 	} else {

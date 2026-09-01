@@ -53,13 +53,29 @@ func (g *Game) PauseGame(disconnectedPlayer *model.Player) {
 	g.State.RemainingTurnSeconds = remaining
 	g.State.Status = model.StatusPaused
 	g.State.PausedPlayer = disconnectedPlayer.Nickname
-	g.State.PauseDeadline = time.Now().Add(30 * time.Second).Unix()
-	g.Log(fmt.Sprintf("⏸️ 玩家 %s 断线，游戏暂停 30 秒等待重连... / ⏸️ %s disconnected, game paused for 30s...", disconnectedPlayer.Nickname, disconnectedPlayer.Nickname))
+	g.State.PausedPlayerID = disconnectedPlayer.ID
+
+	graceSecs := disconnectedPlayer.DisconnectGraceRemaining
+	if graceSecs <= 0 {
+		graceSecs = 30
+	}
+	g.State.PauseDeadline = time.Now().Add(time.Duration(graceSecs) * time.Second).Unix()
+	g.Log(fmt.Sprintf("⏸️ 玩家 %s 断线，游戏暂停（剩余保护时间: %d秒）等待重连... / ⏸️ %s disconnected, game paused (%ds grace remaining)...", disconnectedPlayer.Nickname, graceSecs, disconnectedPlayer.Nickname, graceSecs))
 }
 
 func (g *Game) ResumeGame(reconnectedPlayer *model.Player) {
 	g.State.Status = model.StatusPlaying
 	g.State.PausedPlayer = ""
+	g.State.PausedPlayerID = ""
+
+	// 计算并扣减实际消耗的断线保护时间
+	if g.State.PauseDeadline > 0 {
+		rem := int(g.State.PauseDeadline - time.Now().Unix())
+		if rem < 0 {
+			rem = 0
+		}
+		reconnectedPlayer.DisconnectGraceRemaining = rem
+	}
 	g.State.PauseDeadline = 0
 
 	remaining := g.State.RemainingTurnSeconds
@@ -67,13 +83,13 @@ func (g *Game) ResumeGame(reconnectedPlayer *model.Player) {
 		remaining = 3
 	}
 	g.State.Deadline = time.Now().Add(time.Duration(remaining) * time.Second).Unix()
-	g.Log(fmt.Sprintf("▶️ 玩家 %s 重新连接成功，游戏继续！(剩余操作时间: %d秒) / ▶️ %s reconnected, game resumed!", reconnectedPlayer.Nickname, remaining, reconnectedPlayer.Nickname))
+	g.Log(fmt.Sprintf("▶️ 玩家 %s 重新连接成功，游戏继续！(剩余保护时间: %d秒) / ▶️ %s reconnected, game resumed (%ds grace left)!", reconnectedPlayer.Nickname, reconnectedPlayer.DisconnectGraceRemaining, reconnectedPlayer.Nickname, reconnectedPlayer.DisconnectGraceRemaining))
 }
 
 func (g *Game) HandlePauseTimeout() {
 	var timedOutPlayer *model.Player
 	for _, p := range g.State.Players {
-		if p.Nickname == g.State.PausedPlayer {
+		if p.ID == g.State.PausedPlayerID || (g.State.PausedPlayerID == "" && p.Nickname == g.State.PausedPlayer) {
 			timedOutPlayer = p
 			break
 		}
@@ -81,11 +97,13 @@ func (g *Game) HandlePauseTimeout() {
 
 	if timedOutPlayer != nil && timedOutPlayer.IsAlive && timedOutPlayer.ClientRef == nil {
 		timedOutPlayer.IsAlive = false
-		g.Log(fmt.Sprintf("⌛ 玩家 %s 30秒断线重连超时，已被判定出局！ / ⌛ %s failed to reconnect within 30s and was eliminated!", timedOutPlayer.Nickname, timedOutPlayer.Nickname))
+		timedOutPlayer.DisconnectGraceRemaining = 0
+		g.Log(fmt.Sprintf("⌛ 玩家 %s 断线重连超时，已被判定出局！ / ⌛ %s failed to reconnect in time and was eliminated!", timedOutPlayer.Nickname, timedOutPlayer.Nickname))
 	}
 
 	g.State.Status = model.StatusPlaying
 	g.State.PausedPlayer = ""
+	g.State.PausedPlayerID = ""
 	g.State.PauseDeadline = 0
 
 	g.AdvanceToAlive()
@@ -412,6 +430,7 @@ func (g *Game) ResetGame() {
 	g.State.Winner = ""
 	g.State.PauseDeadline = 0
 	g.State.PausedPlayer = ""
+	g.State.PausedPlayerID = ""
 	g.State.RemainingTurnSeconds = 0
 	g.HiddenCards = []model.Card{}
 
@@ -424,7 +443,7 @@ func (g *Game) ResetGame() {
 			p.IsAlive = true
 			p.Bullets = 6
 			p.Revolver = NewRevolver()
-			p.HasUsedDisconnectGrace = false
+			p.DisconnectGraceRemaining = 30
 			connectedPlayers = append(connectedPlayers, p)
 		} else {
 			g.Log(fmt.Sprintf("🧹 清理断线玩家: %s / 🧹 Removed disconnected player: %s", p.Nickname, p.Nickname))

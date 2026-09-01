@@ -134,18 +134,18 @@ func (r *Room) RemoveClient(client *Client) {
 			}
 		} else if r.Game.State.Status == model.StatusPlaying || r.Game.State.Status == model.StatusPaused {
 			if p.IsAlive && !p.IsSpectator {
-				if !p.HasUsedDisconnectGrace {
-					// 第一次断线：触发 30 秒暂停保护
-					p.HasUsedDisconnectGrace = true
+				if p.DisconnectGraceRemaining > 0 {
+					// 消耗断线保护时间池
 					r.Game.PauseGame(p)
 				} else {
-					// 第二次断线：直接判定淘汰出局
+					// 保护时间已耗尽：直接判定淘汰出局
 					p.IsAlive = false
-					r.Game.Log(fmt.Sprintf("💀 玩家 %s 再次断线，直接被判定淘汰出局！ / 💀 %s disconnected again and was eliminated!", p.Nickname, p.Nickname))
+					r.Game.Log(fmt.Sprintf("💀 玩家 %s 断线保护时间已耗尽，已被判定淘汰出局！ / 💀 %s has no grace time left and was eliminated!", p.Nickname, p.Nickname))
 
-					if r.Game.State.Status == model.StatusPaused && r.Game.State.PausedPlayer == p.Nickname {
+					if r.Game.State.Status == model.StatusPaused && (r.Game.State.PausedPlayerID == p.ID || (r.Game.State.PausedPlayerID == "" && r.Game.State.PausedPlayer == p.Nickname)) {
 						r.Game.State.Status = model.StatusPlaying
 						r.Game.State.PausedPlayer = ""
+						r.Game.State.PausedPlayerID = ""
 						r.Game.State.PauseDeadline = 0
 					}
 
