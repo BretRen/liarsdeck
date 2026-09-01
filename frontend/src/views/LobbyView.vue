@@ -187,10 +187,16 @@
                 <div class="flex items-center gap-1.5">
                   <span class="font-bold text-xs text-slate-100 truncate">{{ rm.host_name }}</span>
                   <span class="badge badge-xs bg-slate-800 text-slate-400 border-slate-700 text-[9px]">{{ t('room_host') }}</span>
+                  <span v-if="rm.game_mode === 'items'" class="badge badge-xs bg-slate-800 text-amber-300 border-slate-700 text-[9px]">
+                    道具
+                  </span>
+                  <span v-else class="badge badge-xs bg-slate-800 text-slate-300 border-slate-700 text-[9px]">
+                    普通
+                  </span>
                 </div>
                 <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
-                  <span :class="rm.status === 'waiting' ? 'text-emerald-400' : 'text-amber-400'">
-                    ● {{ rm.status === 'waiting' ? t('table_status_waiting') : t('table_status_playing') }}
+                  <span :class="rm.status === 'waiting' ? 'text-emerald-400' : rm.status === 'game_over' ? 'text-slate-500' : 'text-amber-400'">
+                    ● {{ rm.status === 'waiting' ? t('table_status_waiting') : rm.status === 'game_over' ? '已结束' : t('table_status_playing') }}
                   </span>
                   <span>{{ rm.player_count }}/{{ rm.max_players }} {{ t('table_players') }}</span>
                 </div>
@@ -214,6 +220,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Create Room Modal Dialog -->
+    <CreateRoomModal
+      v-if="showCreateModal"
+      @confirm="handleConfirmCreate"
+      @close="showCreateModal = false"
+    />
   </div>
 </template>
 
@@ -223,6 +236,7 @@ import { useI18n } from '../composables/useI18n';
 import { useAudio } from '../composables/useAudio';
 import { useAuth } from '../composables/useAuth';
 import { useGameStore } from '../composables/useGameStore';
+import CreateRoomModal from '../components/CreateRoomModal.vue';
 
 const emit = defineEmits(['open-rules', 'open-changelog']);
 const { t, lang, toggleLang } = useI18n();
@@ -233,6 +247,7 @@ const store = useGameStore();
 
 const roomCodeInput = ref('');
 const mode = ref('create'); // 'create' | 'join' | 'spectate'
+const showCreateModal = ref(false);
 const publicRooms = ref([]);
 const fetchingRooms = ref(false);
 let pollInterval = null;
@@ -291,10 +306,15 @@ function quickJoinRoom(code) {
 }
 
 function onCreateRoom() {
+  showCreateModal.value = true;
+}
+
+function handleConfirmCreate({ mode: roomMode, maxPlayers }) {
+  showCreateModal.value = false;
   const playerName = nickname.value.trim() || 'Player';
   const sub = user.value?.sub || '';
   store.clearSession();
-  store.connect('create', '', playerName, sub);
+  store.connect('create', '', playerName, sub, { mode: roomMode, maxPlayers });
 }
 
 function onJoinRoom() {
