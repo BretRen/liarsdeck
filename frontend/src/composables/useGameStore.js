@@ -183,7 +183,7 @@ export function useGameStore() {
           } else {
             audio.playGunClick();
           }
-        }, 400);
+        }, 1100);
       } else if (ev.data.fatal) {
         audio.playGunshot();
         isFatalShotActive.value = true;
