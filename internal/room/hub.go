@@ -34,7 +34,7 @@ func RandomCode(n int) string {
 	return string(b)
 }
 
-func (h *Hub) CreateRoom() *Room {
+func (h *Hub) CreateRoom(options ...any) *Room {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -46,7 +46,7 @@ func (h *Hub) CreateRoom() *Room {
 		}
 	}
 
-	room := NewRoom(code, h)
+	room := NewRoom(code, h, options...)
 	h.Rooms[code] = room
 	go room.Watchdog()
 	return room
@@ -108,18 +108,27 @@ func (h *Hub) GetPublicRooms() []model.RoomSummary {
 			}
 		}
 		status := r.Game.State.Status
+		maxPlayers := r.Game.State.MaxPlayers
+		if maxPlayers <= 0 {
+			maxPlayers = 4
+		}
+		gameMode := r.Game.State.GameMode
+		if gameMode == "" {
+			gameMode = model.ModeClassic
+		}
 		r.Game.Unlock()
 
 		r.mu.Lock()
 		clientCount := len(r.Clients)
 		r.mu.Unlock()
 
-		if clientCount > 0 {
+		if clientCount > 0 && status != "game_over" {
 			summaries = append(summaries, model.RoomSummary{
 				RoomCode:    r.Code,
 				HostName:    hostName,
 				PlayerCount: playerCount,
-				MaxPlayers:  4,
+				MaxPlayers:  maxPlayers,
+				GameMode:    gameMode,
 				Status:      status,
 				CreatedAt:   r.CreatedAt,
 			})

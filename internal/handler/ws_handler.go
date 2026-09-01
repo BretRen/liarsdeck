@@ -81,7 +81,22 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 	}
 
 	if action == "create" {
-		r := h.Hub.CreateRoom()
+		mode := strings.TrimSpace(c.QueryParam("mode"))
+		if mode != model.ModeItems {
+			mode = model.ModeClassic
+		}
+		maxPlayers := 4
+		if mpStr := strings.TrimSpace(c.QueryParam("max_players")); mpStr != "" {
+			if mpStr == "2" {
+				maxPlayers = 2
+			} else if mpStr == "3" {
+				maxPlayers = 3
+			} else if mpStr == "4" {
+				maxPlayers = 4
+			}
+		}
+
+		r := h.Hub.CreateRoom(mode, maxPlayers)
 		client := room.NewClient(clientID, nickname, r, conn)
 
 		r.AddClient(client)
@@ -97,9 +112,10 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 			IsHost:                   true,
 			IsSpectator:              false,
 			DisconnectGraceRemaining: 30,
+			Items:                    []model.ItemType{},
 			ClientRef:                client,
 		})
-		r.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s / 🏠 %s created room %s", nickname, r.Code, nickname, r.Code))
+		r.Game.Log(fmt.Sprintf("🏠 %s 创建了房间 %s（%d人 / 模式: %s） / 🏠 %s created room %s (%d players / %s)", nickname, r.Code, maxPlayers, mode, nickname, r.Code, maxPlayers, mode))
 		r.Game.Unlock()
 
 		go client.WritePump()
@@ -171,7 +187,12 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 		}
 	}
 
-	if !isSpectator && r.Game.State.Status == model.StatusWaiting && playerCount < 4 {
+	maxLimit := r.Game.State.MaxPlayers
+	if maxLimit <= 0 {
+		maxLimit = 4
+	}
+
+	if !isSpectator && r.Game.State.Status == model.StatusWaiting && playerCount < maxLimit {
 		r.Game.State.Players = append(r.Game.State.Players, &model.Player{
 			ID:                       client.ID,
 			Nickname:                 nickname,
@@ -182,6 +203,7 @@ func (h *WSHandler) HandleWebSocket(c echo.Context) error {
 			IsHost:                   false,
 			IsSpectator:              false,
 			DisconnectGraceRemaining: 30,
+			Items:                    []model.ItemType{},
 			ClientRef:                client,
 		})
 		r.Game.Log(fmt.Sprintf("👋 %s 加入了房间 / 👋 %s joined room", nickname, nickname))

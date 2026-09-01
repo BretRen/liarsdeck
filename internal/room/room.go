@@ -19,11 +19,11 @@ type Room struct {
 	mu        sync.Mutex
 }
 
-func NewRoom(code string, hub *Hub) *Room {
+func NewRoom(code string, hub *Hub, options ...any) *Room {
 	return &Room{
 		Code:      code,
 		Clients:   make(map[*Client]bool),
-		Game:      game.NewGame(code),
+		Game:      game.NewGame(code, options...),
 		Hub:       hub,
 		CreatedAt: time.Now().Unix(),
 	}
@@ -50,6 +50,9 @@ func (r *Room) Broadcast() {
 		"remaining_turn_seconds": r.Game.State.RemainingTurnSeconds,
 		"winner":                 r.Game.State.Winner,
 		"room_code":              r.Game.State.RoomCode,
+		"game_mode":              r.Game.State.GameMode,
+		"max_players":            r.Game.State.MaxPlayers,
+		"double_damage":          r.Game.State.DoubleDamage,
 	}
 	rawPlayers := make([]*model.Player, len(r.Game.State.Players))
 	copy(rawPlayers, r.Game.State.Players)
@@ -323,6 +326,47 @@ func (r *Room) HandleClientMessage(c *Client, msg model.WSMessage) {
 						r.BroadcastEvent("shot", model.ShotEvent{Target: target, Fatal: fatal})
 					},
 				)
+			}
+		}
+
+	case "use_item":
+		if g.State.Status == model.StatusPlaying && len(g.State.Players) > g.State.CurrentTurn && g.State.CurrentTurn >= 0 {
+			currPlayer := g.State.Players[g.State.CurrentTurn]
+			if currPlayer.ID == c.ID && currPlayer.IsAlive && !currPlayer.IsSpectator {
+				var req model.UseItemPayload
+				if err := json.Unmarshal(msg.Payload, &req); err == nil {
+					res, err := g.UseItem(g.State.CurrentTurn, req.Item)
+					if err == nil {
+						r.BroadcastEvent("item_used", model.ItemUsedEvent{
+							PlayerID:   c.ID,
+							Nickname:   c.Nickname,
+							Item:       req.Item,
+							ItemName:   string(req.Item),
+							TargetCard: g.State.TableCard,
+						})
+						// 鹰眼透镜私密下发给调用者
+						if inspected, ok := res["inspected_card"].(model.Card); ok {
+							privData, _ := json.Marshal(map[string]any{
+								"type": "eagle_eye_result",
+								"data": map[string]any{
+									"card": inspected,
+								},
+							})
+							select {
+							case c.Send <- privData:
+							default:
+							}
+						}
+					} else {
+						errData, _ := json.Marshal(map[string]string{
+							"error": err.Error(),
+						})
+						select {
+						case c.Send <- errData:
+						default:
+						}
+					}
+				}
 			}
 		}
 	}

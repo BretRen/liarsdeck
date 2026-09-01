@@ -16,15 +16,32 @@ type Game struct {
 	mu          sync.Mutex
 }
 
-func NewGame(code string) *Game {
+func NewGame(code string, options ...any) *Game {
+	mode := model.ModeClassic
+	maxPlayers := 4
+	if len(options) > 0 {
+		if m, ok := options[0].(string); ok && m != "" {
+			mode = m
+		}
+	}
+	if len(options) > 1 {
+		if mp, ok := options[1].(int); ok && mp >= 2 && mp <= 4 {
+			maxPlayers = mp
+		}
+	}
+
 	return &Game{
 		State: &model.GameState{
-			Status:      model.StatusWaiting,
-			Players:     make([]*model.Player, 0),
-			CurrentTurn: -1,
-			LastPlayer:  -1,
-			RoomCode:    code,
-			Logs:        make([]string, 0),
+			Status:          model.StatusWaiting,
+			Players:         make([]*model.Player, 0),
+			CurrentTurn:     -1,
+			LastPlayer:      -1,
+			RoomCode:        code,
+			GameMode:        mode,
+			MaxPlayers:      maxPlayers,
+			DoubleDamage:    false,
+			LastPlayedCards: make([]model.Card, 0),
+			Logs:            make([]string, 0),
 		},
 		HiddenCards: make([]model.Card, 0),
 	}
@@ -126,6 +143,27 @@ func (g *Game) HandlePauseTimeout() {
 	g.ResetTimer()
 }
 
+var AllItems = []model.ItemType{
+	model.ItemEagleEye,
+	model.ItemSawedOff,
+	model.ItemHardLiquor,
+	model.ItemKevlarArmor,
+	model.ItemFateShift,
+}
+
+func (g *Game) GrantRandomItem(p *model.Player) model.ItemType {
+	if len(p.Items) >= 2 {
+		return ""
+	}
+	nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(AllItems))))
+	if err != nil {
+		return ""
+	}
+	item := AllItems[nBig.Int64()]
+	p.Items = append(p.Items, item)
+	return item
+}
+
 func (g *Game) StartRound() {
 	deck := NewDeck()
 	var tableCard model.Card
@@ -161,6 +199,12 @@ func (g *Game) StartRound() {
 				copy(p.Hand, deck)
 				deck = nil
 			}
+
+			// 道具死斗模式：每轮为存活玩家补给 1 件随机道具（最多存 2 件）
+			if g.State.GameMode == model.ModeItems && len(p.Items) < 2 {
+				g.GrantRandomItem(p)
+			}
+
 			aliveCount++
 		}
 	}
@@ -180,6 +224,8 @@ func (g *Game) StartRound() {
 	g.HiddenCards = []model.Card{}
 	g.State.LastPlayedCnt = 0
 	g.State.LastPlayer = -1
+	g.State.LastPlayedCards = []model.Card{}
+	g.State.DoubleDamage = false
 
 	if g.State.CurrentTurn == -1 && len(g.State.Players) > 0 {
 		nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(g.State.Players))))
@@ -277,6 +323,8 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 	g.HiddenCards = cards
 	g.State.LastPlayedCnt = len(cards)
 	g.State.LastPlayer = playerIdx
+	g.State.LastPlayedCards = make([]model.Card, len(cards))
+	copy(g.State.LastPlayedCards, cards)
 
 	g.Log(fmt.Sprintf("%s 打出了 %d 张暗牌 / %s played %d cards", p.Nickname, len(cards), p.Nickname, len(cards)))
 
@@ -286,6 +334,104 @@ func (g *Game) PlayCards(playerIdx int, cards []model.Card) bool {
 
 	g.NextTurn()
 	return true
+}
+
+func (g *Game) UseItem(playerIdx int, item model.ItemType) (map[string]any, error) {
+	if g.State.Status != model.StatusPlaying {
+		return nil, fmt.Errorf("当前不在对局中 / Not in game")
+	}
+	if playerIdx < 0 || playerIdx >= len(g.State.Players) {
+		return nil, fmt.Errorf("无效玩家 / Invalid player")
+	}
+	p := g.State.Players[playerIdx]
+	if !p.IsAlive || p.IsSpectator {
+		return nil, fmt.Errorf("玩家无法行动 / Cannot act")
+	}
+	if playerIdx != g.State.CurrentTurn {
+		return nil, fmt.Errorf("还未轮到你的行动回合 / Not your turn")
+	}
+
+	// 查找并移除道具
+	itemIdx := -1
+	for i, it := range p.Items {
+		if it == item {
+			itemIdx = i
+			break
+		}
+	}
+	if itemIdx == -1 {
+		return nil, fmt.Errorf("未拥有该道具 / Item not owned")
+	}
+
+	switch item {
+	case model.ItemEagleEye:
+		if len(g.State.LastPlayedCards) == 0 {
+			return nil, fmt.Errorf("当前桌面上暂无出牌 / No played cards")
+		}
+		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
+		nBig, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(g.State.LastPlayedCards))))
+		inspectedCard := g.State.LastPlayedCards[nBig.Int64()]
+		g.Log(fmt.Sprintf("%s 使用了【放大镜】，查看了一张底牌 / %s used Magnifier", p.Nickname, p.Nickname))
+		return map[string]any{
+			"item":           item,
+			"inspected_card": inspectedCard,
+		}, nil
+
+	case model.ItemSawedOff:
+		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
+		g.State.DoubleDamage = true
+		g.Log(fmt.Sprintf("%s 使用了【猎枪】，下一次开枪判定连扣两次扳机 / %s used Shotgun", p.Nickname, p.Nickname))
+		return map[string]any{
+			"item": item,
+		}, nil
+
+	case model.ItemHardLiquor:
+		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
+		newHand := make([]model.Card, 0, len(p.Hand))
+		replacedCount := 0
+		for _, c := range p.Hand {
+			if c != g.State.TableCard && c != model.Two && replacedCount < 2 {
+				deck := NewDeck()
+				newHand = append(newHand, deck[0])
+				replacedCount++
+			} else {
+				newHand = append(newHand, c)
+			}
+		}
+		p.Hand = newHand
+		g.Log(fmt.Sprintf("%s 使用了【啤酒】，替换了手中的假牌 / %s used Beer", p.Nickname, p.Nickname))
+		return map[string]any{
+			"item": item,
+		}, nil
+
+	case model.ItemKevlarArmor:
+		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
+		p.HasArmor = true
+		g.Log(fmt.Sprintf("%s 穿上了【防弹衣】 / %s equipped Vest", p.Nickname, p.Nickname))
+		return map[string]any{
+			"item": item,
+		}, nil
+
+	case model.ItemFateShift:
+		p.Items = append(p.Items[:itemIdx], p.Items[itemIdx+1:]...)
+		allCards := []model.Card{model.King, model.Queen, model.Ace}
+		var validCards []model.Card
+		for _, c := range allCards {
+			if c != g.State.TableCard {
+				validCards = append(validCards, c)
+			}
+		}
+		nBig, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(len(validCards))))
+		newTableCard := validCards[nBig.Int64()]
+		g.State.TableCard = newTableCard
+		g.Log(fmt.Sprintf("%s 使用了【骰子】，桌面目标牌变更为: %s / %s used Dice! New card: %s", p.Nickname, newTableCard, p.Nickname, newTableCard))
+		return map[string]any{
+			"item":           item,
+			"new_table_card": newTableCard,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("未知道具类型 / Unknown item")
 }
 
 func (g *Game) CallLiar(
@@ -327,10 +473,8 @@ func (g *Game) CallLiar(
 		g.FireGun(accusedIdx, onShot)
 	} else {
 		g.Log("❌ 质疑失败！出牌者是清白的！ / ❌ Challenge failed! The cards were honest!")
-		// 1. 质疑者（诬告者）必须先开枪受罚！
 		g.ShootPlayer(callerIdx, onShot)
 
-		// 2. 检查剩余存活人数
 		g.State.CurrentTurn = callerIdx
 		g.AdvanceToAlive()
 		if g.State.Status == model.StatusGameOver {
@@ -346,7 +490,6 @@ func (g *Game) CallLiar(
 			}
 		}
 
-		// 唯一胜利条件：全场仅剩最后一名存活者
 		if aliveCount <= 1 && lastAlive != nil {
 			g.State.Status = model.StatusGameOver
 			g.State.Winner = lastAlive.Nickname
@@ -358,7 +501,6 @@ func (g *Game) CallLiar(
 			g.Log(fmt.Sprintf("%s 成功出清全部手牌，本轮结束，重新发牌！ / %s emptied all cards, dealing new round!", accused.Nickname, accused.Nickname))
 		}
 
-		// 存活人数 > 1，重新洗牌发牌开启新一轮
 		g.StartRound()
 	}
 }
@@ -369,26 +511,85 @@ func (g *Game) ShootPlayer(playerIdx int, onShot func(target string, fatal bool)
 	}
 	p := g.State.Players[playerIdx]
 
-	if len(p.Revolver) == 0 {
-		p.Revolver = NewRevolver()
-		p.Bullets = 6
+	pullTrigger := func() bool {
+		if len(p.Revolver) == 0 {
+			p.Revolver = NewRevolver()
+			p.Bullets = 6
+		}
+		bullet := p.Revolver[0]
+		p.Revolver = p.Revolver[1:]
+		p.Bullets = len(p.Revolver)
+		return bullet == model.BulletFatal
 	}
 
-	bullet := p.Revolver[0]
-	p.Revolver = p.Revolver[1:]
-	p.Bullets = len(p.Revolver)
+	isFatal := false
 
-	isFatal := bullet == model.BulletFatal
+	if g.State.DoubleDamage {
+		g.Log(fmt.Sprintf("猎枪生效：对 %s 连扣两次扳机 / Shotgun active: %s takes double shots", p.Nickname, p.Nickname))
+
+		hit1 := pullTrigger()
+		if hit1 {
+			if p.HasArmor {
+				p.HasArmor = false
+				g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了第一发致命子弹 / Vest blocked 1st fatal shot for %s", p.Nickname, p.Nickname))
+				hit2 := pullTrigger()
+				if hit2 {
+					p.IsAlive = false
+					isFatal = true
+					g.Log(fmt.Sprintf("第二发命中实弹，%s 淘汰出局 / %s killed on 2nd shot", p.Nickname, p.Nickname))
+				} else {
+					g.Log(fmt.Sprintf("第二发为空包弹，%s 幸存 / %s survived on 2nd shot", p.Nickname, p.Nickname))
+				}
+			} else {
+				p.IsAlive = false
+				isFatal = true
+				g.Log(fmt.Sprintf("第一发命中实弹，%s 淘汰出局 / %s killed on 1st shot", p.Nickname, p.Nickname))
+			}
+		} else {
+			g.Log(fmt.Sprintf("第一发为空包弹，继续判定第二发 / 1st shot blank, taking 2nd shot for %s", p.Nickname))
+			hit2 := pullTrigger()
+			if hit2 {
+				if p.HasArmor {
+					p.HasArmor = false
+					g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了第二发致命子弹 / Vest blocked 2nd fatal shot for %s", p.Nickname, p.Nickname))
+				} else {
+					p.IsAlive = false
+					isFatal = true
+					g.Log(fmt.Sprintf("第二发命中实弹，%s 淘汰出局 / %s killed on 2nd shot", p.Nickname, p.Nickname))
+				}
+			} else {
+				g.Log(fmt.Sprintf("两次皆为空包弹，%s 幸存 / Both shots blank, %s survived", p.Nickname, p.Nickname))
+			}
+		}
+		g.State.DoubleDamage = false
+	} else {
+		hit := pullTrigger()
+		if hit {
+			if p.HasArmor {
+				p.HasArmor = false
+				g.Log(fmt.Sprintf("防弹衣发挥作用，为 %s 抵消了致命子弹 / Vest blocked the fatal bullet for %s", p.Nickname, p.Nickname))
+			} else {
+				p.IsAlive = false
+				isFatal = true
+				g.Log(fmt.Sprintf("%s 抽中致命实弹，淘汰出局 / %s was shot fatally", p.Nickname, p.Nickname))
+			}
+		} else {
+			g.Log(fmt.Sprintf("%s 抽中空包弹，逃过一劫 / %s survived", p.Nickname, p.Nickname))
+		}
+	}
 
 	if onShot != nil {
 		onShot(p.Nickname, isFatal)
 	}
 
-	if isFatal {
-		p.IsAlive = false
-		g.Log(fmt.Sprintf("💥 砰！%s 抽中致命子弹，被淘汰出局！ / 💥 BANG! %s was shot fatally!", p.Nickname, p.Nickname))
-	} else {
-		g.Log(fmt.Sprintf("💨 咔哒。%s 抽中空包弹，逃过一劫。 / 💨 Click. %s survived!", p.Nickname, p.Nickname))
+	// 道具模式：若空枪幸存，奖励 1 个随机道具
+	if p.IsAlive && g.State.GameMode == model.ModeItems {
+		if len(p.Items) < 2 {
+			newItem := g.GrantRandomItem(p)
+			if newItem != "" {
+				g.Log(fmt.Sprintf("%s 空枪幸存，获得道具补给 / %s survived and gained an item", p.Nickname, p.Nickname))
+			}
+		}
 	}
 
 	return isFatal
@@ -432,7 +633,9 @@ func (g *Game) ResetGame() {
 	g.State.PausedPlayer = ""
 	g.State.PausedPlayerID = ""
 	g.State.RemainingTurnSeconds = 0
+	g.State.DoubleDamage = false
 	g.HiddenCards = []model.Card{}
+	g.State.LastPlayedCards = []model.Card{}
 
 	// 仅保留当前处于在线连接状态的玩家，自动清理断线玩家
 	connectedPlayers := make([]*model.Player, 0, len(g.State.Players))
@@ -444,6 +647,8 @@ func (g *Game) ResetGame() {
 			p.Bullets = 6
 			p.Revolver = NewRevolver()
 			p.DisconnectGraceRemaining = 30
+			p.Items = []model.ItemType{}
+			p.HasArmor = false
 			connectedPlayers = append(connectedPlayers, p)
 		} else {
 			g.Log(fmt.Sprintf("🧹 清理断线玩家: %s / 🧹 Removed disconnected player: %s", p.Nickname, p.Nickname))
